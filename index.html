@@ -1,0 +1,1526 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PIP — Indices &amp; Models</title>
+<!-- Ruestet COOP/COEP nach, falls der Host keine eigenen Header setzt (z.B. GitHub Pages).
+     Auf einem Host MIT Headern (crossOriginIsolated=true) ist das ein No-op. -->
+<script src="coi-serviceworker.js"></script>
+<style>
+  :root{--ground:#F1F4F6;--surface:#fff;--surface-2:#F7F9FA;--ink:#17232E;--muted:#5A6A78;--line:#DFE6EB;
+    --accent:#0E6E78;--accent-ink:#0A555D;--accent-soft:#E3F0F1;--good:#2F8A57;--warn:#B7791F;--crit:#C0453F;
+    --mono:ui-monospace,"Cascadia Code",Consolas,monospace;--r:12px;--r-sm:8px;
+    --shadow:0 1px 2px rgba(23,35,46,.06),0 6px 20px rgba(23,35,46,.06)}
+  @media(prefers-color-scheme:dark){:root{--ground:#0E1620;--surface:#16202C;--surface-2:#1B2733;--ink:#E6EDF3;
+    --muted:#93A3B2;--line:#26343F;--accent:#37A7B0;--accent-ink:#84D4DA;--accent-soft:#123036}}
+  *{box-sizing:border-box}[hidden]{display:none!important}
+  body{margin:0;background:var(--ground);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+  h1,h2{margin:0} .mono{font-family:var(--mono)}
+  header{border-bottom:1px solid var(--line);background:var(--surface)}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 0}
+  .mark{font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:23px} .mark b{color:var(--accent)}
+  .badge{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);background:var(--accent-soft);
+    border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);padding:4px 9px;border-radius:100px;font-weight:600}
+  .lede{padding:20px 0 8px;max-width:70ch} .lede h1{font-family:Georgia,serif;font-size:clamp(22px,3vw,30px);line-height:1.15}
+  .lede p{color:var(--muted);margin:.5rem 0 0}
+  /* Die 3 Hauptreiter sind die zentrale Weggabelung der App -> als grosse farbige Kacheln statt
+     kleiner Text-Tabs, schon in der Farbe eingefaerbt, die der jeweilige Bereich spaeter traegt. */
+  .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .tabs button{font:inherit;text-align:left;cursor:pointer;padding:15px 17px;border-radius:var(--r-sm);
+    border:2px solid var(--line);background:var(--surface);transition:border-color .15s,background .15s}
+  .tabs button .tnm{display:block;font-size:16px;font-weight:700;color:var(--ink)}
+  .tabs button .tsub{display:block;font-size:11.5px;color:var(--muted);margin-top:3px;font-weight:400}
+  .tabs button:hover:not(:disabled):not([aria-selected="true"]){border-color:var(--t-accent)}
+  .tabs button:disabled{opacity:.45;cursor:default}
+  .tabs button[data-v="countries"]{--t-accent:#0E6E78;--t-soft:#E3F0F1}
+  .tabs button[data-v="parties"]  {--t-accent:#6B4E8A;--t-soft:#EEE9F4}
+  .tabs button[data-v="eu"]       {--t-accent:#2B5797;--t-soft:#E7EDF8}
+  @media(prefers-color-scheme:dark){
+    .tabs button[data-v="countries"]{--t-accent:#37A7B0;--t-soft:#123036}
+    .tabs button[data-v="parties"]  {--t-accent:#A88BC8;--t-soft:#241C33}
+    .tabs button[data-v="eu"]       {--t-accent:#6E9AD8;--t-soft:#16233A}
+  }
+  .tabs button[aria-selected="true"]{border-color:var(--t-accent);background:var(--t-soft);
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--t-accent) 16%, transparent)}
+  .tabs button[aria-selected="true"] .tnm{color:var(--t-accent)}
+  @media(max-width:640px){ .tabs{grid-template-columns:1fr} }
+  main{padding:14px 0 40px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:18px}
+  .hd{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line)}
+  .no{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--accent-ink);background:var(--accent-soft);width:26px;height:26px;display:grid;place-items:center;border-radius:7px}
+  .hd h2{font-size:15px;font-weight:650} .hd .hint{margin-left:auto;color:var(--muted);font-size:12.5px}
+  .bd{padding:18px}
+  .lab{font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:650;margin-bottom:9px;display:block}
+  .dims{display:flex;flex-wrap:wrap;gap:10px}
+  .dim{cursor:pointer;background:var(--surface-2);border:1.5px solid var(--line);border-radius:var(--r-sm);padding:11px 14px;font:inherit;text-align:left}
+  .dim .nm{font-weight:650} .dim .cd{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:6px}
+  .dim[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent)}
+  /* Farbverlauf unter jeder Dimensions-Kachel: zeigt die Pole der Skala auf einen Blick. */
+  .dim .spectrum{height:6px;border-radius:100px;margin-top:10px;min-width:148px}
+  .dim .poles{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:4px}
+  .sp-LR{background:linear-gradient(90deg,#C0453F,#c9c3b6 48%,#2E5EAA)}
+  .sp-GG{background:linear-gradient(90deg,#3E8E5A,#cfc7b4 50%,#9A7B3F)}
+  .sp-RILE{background:linear-gradient(90deg,#B3908E,#d6d1ca 50%,#8797B7)}   /* gedaempft: nachrangige Skala */
+  .sp-custom{background:linear-gradient(90deg,#1F2933,#9AA5B1)}
+  .dim-minor .nm{font-weight:600;color:var(--muted)}                        /* RILE als Zusatzangebot */
+
+  /* Bereichsfarben: jeder Reiter faerbt seine Bedienelemente ueber --accent ein, damit sofort
+     erkennbar ist, wo man sich befindet. Diagrammfarben bleiben davon unberuehrt (fest kodiert). */
+  #view-countries{--accent:#0E6E78;--accent-ink:#0A555D;--accent-soft:#E3F0F1}
+  #view-parties  {--accent:#6B4E8A;--accent-ink:#553E70;--accent-soft:#EEE9F4}
+  #view-eu       {--accent:#2B5797;--accent-ink:#23477C;--accent-soft:#E7EDF8}
+  @media(prefers-color-scheme:dark){
+    #view-countries{--accent:#37A7B0;--accent-ink:#84D4DA;--accent-soft:#123036}
+    #view-parties  {--accent:#A88BC8;--accent-ink:#CDBAE4;--accent-soft:#241C33}
+    #view-eu       {--accent:#6E9AD8;--accent-ink:#A8C4EC;--accent-soft:#16233A}
+  }
+
+  .tools{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .preset{font-size:12.5px;color:var(--accent-ink);background:transparent;border:1px solid var(--line);padding:5px 11px;border-radius:100px;cursor:pointer;font:inherit}
+  .preset:hover{border-color:var(--accent)} .count{margin-left:auto;color:var(--muted);font-size:12.5px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{font-family:var(--mono);font-size:12px;padding:6px 10px;border-radius:7px;border:1px solid var(--line);background:var(--surface-2);color:var(--muted);cursor:pointer}
+  .chip[aria-pressed="true"]{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 45%,transparent);color:var(--accent-ink);font-weight:600}
+  .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-sm)}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:520px}
+  th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:9px 12px;background:var(--surface-2);border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:8px 12px;border-bottom:1px solid var(--line)} tbody tr:last-child td{border-bottom:0}
+  .ctry{font-weight:600;white-space:nowrap} .ctry .n{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:6px;font-weight:400}
+  select{font:inherit;font-size:13px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:5px 8px;max-width:100%}
+  .vp{display:flex;flex-wrap:wrap;gap:5px} .vp label{font-family:var(--mono);font-size:11.5px;padding:3px 8px;border-radius:100px;border:1px solid var(--line);color:var(--muted);cursor:pointer}
+  .vp label:has(input:checked){background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 40%,transparent);color:var(--accent-ink)}
+  .vp input{position:absolute;opacity:0;width:0;height:0}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:var(--surface)}
+  .seg button{font:inherit;font-size:13px;font-weight:600;color:var(--muted);background:transparent;border:0;padding:10px 16px;cursor:pointer}
+  .seg button+button{border-left:1px solid var(--line)}
+  .seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-ink)}
+  .seglab{font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:650;margin-right:2px}
+  #ciCodeList{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+  .codechip{font:inherit;font-size:12px;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);
+    border-radius:100px;padding:3px 10px;cursor:pointer;text-align:left}
+  .codechip:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .codechip b{font-family:var(--mono);color:var(--accent-ink);margin-right:5px}
+  .runrow{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:4px}
+  .run{font-size:15px;font-weight:650;color:#fff;background:var(--accent);border:0;border-radius:var(--r-sm);padding:12px 22px;cursor:pointer}
+  .run:hover{background:var(--accent-ink)} .run:disabled{opacity:.5;cursor:default}
+  .status{font-size:13px;color:var(--muted)} .status b{color:var(--ink)}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}
+  @keyframes s{to{transform:rotate(360deg)}}
+  .dl{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .dlbtn{font:inherit;font-size:13px;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 14px;display:flex;gap:8px;align-items:center}
+  .dlbtn:hover{border-color:var(--accent)} .dlbtn .x{font-family:var(--mono);font-weight:700}
+  .note{font-size:12px;color:var(--muted);margin-top:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:11px 13px}
+  .guide{margin:2px 0 4px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);overflow:hidden}
+  .guide>summary{cursor:pointer;padding:12px 16px;font-weight:600;font-size:14px;color:var(--accent-ink);list-style:none}
+  .guide>summary::-webkit-details-marker{display:none}
+  .guide>summary::before{content:"▸";margin-right:8px;display:inline-block;transition:transform .15s}
+  .guide[open]>summary::before{transform:rotate(90deg)}
+  .guide .gbody{padding:2px 16px 16px;font-size:13.5px;line-height:1.55;color:var(--ink)}
+  .guide .gbody h4{margin:14px 0 4px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+  .guide .gbody p{margin:4px 0} .guide .gbody b{font-weight:650}
+  .guide .gbody code{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+  .guide .gbody dl{margin:4px 0;display:grid;grid-template-columns:auto 1fr;gap:2px 12px}
+  .guide .gbody dt{font-weight:650}.guide .gbody dd{margin:0;color:var(--muted)}
+  footer{border-top:1px solid var(--line);color:var(--muted);font-size:12px;padding:18px 0 34px}
+  footer a{color:var(--accent-ink)}
+  .chartcard{margin-top:14px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
+  .chartcard .hd{display:flex;justify-content:space-between;align-items:baseline;padding:12px 16px 0;gap:10px;flex-wrap:wrap}
+  .chartcard .bd{padding:6px 16px 14px}
+  .chart-sel{font-size:12px;color:var(--muted);margin-bottom:4px}
+  .chart-sel select{font:inherit;font-size:12px;margin-left:4px}
+  .chart-t{font-size:12px;color:var(--muted)} .chart-v{font-weight:650;font-size:14px;margin:2px 0 8px}
+  .chartlegend{display:flex;flex-wrap:wrap;gap:10px 14px;margin-top:6px;font-size:12px;color:var(--muted)}
+  .chartlegend span{display:inline-flex;align-items:center;gap:5px}
+  .chartlegend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+  figure.chart{margin:0}
+  .chart-tools{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .chart-tools button{font:inherit;font-size:11.5px;cursor:pointer;background:var(--surface);border:1px solid var(--line);
+    border-radius:100px;padding:5px 12px;color:var(--muted)}
+  .chart-tools button:hover{border-color:var(--accent);color:var(--accent-ink)}
+  .chart-tools .chart-status{font-size:11.5px;color:var(--muted)}
+  .pager{display:flex;gap:6px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  .pager button{font:inherit;font-size:11.5px;cursor:pointer;background:var(--surface);border:1px solid var(--line);
+    border-radius:100px;padding:5px 11px;color:var(--muted)}
+  .pager button:hover:not(:disabled){border-color:var(--accent);color:var(--accent-ink)}
+  .pager button:disabled{opacity:.4;cursor:default}
+  .pager .pginfo{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;margin:0 6px}
+  .custtag{font-family:var(--mono);font-size:10px;color:var(--warn);border-radius:100px;padding:1px 6px;
+    border:1px solid color-mix(in srgb,var(--warn) 40%,transparent)}
+  .segbtn{font:inherit;font-size:11px;cursor:pointer;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:100px;padding:2px 9px;color:var(--muted);margin-top:5px}
+  .segbtn:hover{border-color:var(--accent);color:var(--accent-ink)}
+  .segcont{color:var(--muted);font-size:15px;padding-left:6px}
+  .portf{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .portf label{font-size:11.5px;color:var(--muted);display:inline-flex;gap:4px;align-items:center}
+  .portf select{font-size:12px}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="top">
+  <div class="mark">PIP<b> — </b>Indices &amp; Models</div>
+  <span class="badge" id="engStatus"><span class="spin"></span>starting R…</span>
+</div></div></header>
+
+<div class="wrap">
+  <div class="lede">
+    <h1>Estimate political actor positions — and take the data with you.</h1>
+    <p>Pick a scale, choose countries and how each government &amp; veto-player range is modelled, then run it in your browser. No install, no server — the computation runs locally via WebR.</p>
+  </div>
+
+  <details class="guide">
+    <summary>How to use this tool</summary>
+    <div class="gbody">
+      <p>This tool estimates where political actors — governments, veto players, and EU institutions — sit on
+         ideological scales, following the Agenda Setting Power Model (Jahn 2016). All data comes from the
+         <b>PIP – Parties, Institutions &amp; Preferences</b> dataset and every calculation runs in your browser.</p>
+
+      <h4>Ideological scales</h4>
+      <dl>
+        <dt>LR</dt><dd>Left–Right — the general economic/social left–right position.</dd>
+        <dt>GG</dt><dd>Green–Growth — ecology versus economic growth.</dd>
+        <dt>RILE</dt><dd>the classic Manifesto-Project right–left index.</dd>
+      </dl>
+
+      <h4>The three tabs</h4>
+      <dl>
+        <dt>Country models</dt><dd>Per country, the <b>government position</b> and the <b>veto-player range</b>
+          on the chosen scale, quarter by quarter. Standard results appear instantly; changing a country's model
+          (how the government is aggregated, minority rule, which veto players count) recomputes just that country live.</dd>
+        <dt>Party positions</dt><dd>Where each individual party sits over time. Pick <b>LR</b> or <b>GG</b> to get
+          that scale's full set of Jahn indices — position, <b>importance</b> (how much weight the party gives the
+          dimension), the narrower <b>Core</b> and wider <b>Plus</b> variants with their importances, and
+          <b>cohesion</b>. <b>RILE</b> is offered as a single extra column.</dd>
+        <dt>EU institutions</dt><dd>Positions of the European Council, Commission, Council of Ministers, Parliament,
+          and the overall EU, modelled per treaty period. You may swap the institutional models.</dd>
+      </dl>
+
+      <h4>Custom scale</h4>
+      <p>Every tab has a fourth scale option, <b>Custom</b>, alongside LR/GG/RILE: build your own from
+        manifesto categories, e.g. <code>per501 - per110</code> (click “show available codes” for the
+        full labelled list). It shows <b>party</b> positions in the Party tab, the <b>government
+        position</b> in Country models, and the <b>EU institutions</b>' positions in EU institutions —
+        always computed live, since there is no precomputed standard model for a scale you just typed in.</p>
+
+      <h4>Reading a result</h4>
+      <p>A higher value sits further right / toward growth; a lower value further left / toward ecology.
+         <b>GOV_POS</b> is the government's position. <b>VP_RANGE</b> is the ideological spread of the chosen
+         national veto players (a wider range means change is harder to pass); <b>VP_RANGE_EU</b> is the same
+         range with the EU added as an extra veto player — it can only be equal to or wider than VP_RANGE, and
+         only differs during actual EU membership. Comparing the two shows how much the EU constrains policy
+         change on top of national veto players. <b>MISFIT</b> = EU_POS − GOV_POS shows how far a member
+         state's government sits from the EU position.</p>
+
+      <h4>Getting the data out</h4>
+      <p>Toggle <b>Quarterly / Yearly</b>, then download any table as <b>CSV</b>, <b>Excel</b>, <b>Stata</b> or <b>R</b>.
+         The first “custom” calculation loads the R engine once (~30 s); after that it is quick.</p>
+    </div>
+  </details>
+
+  <nav class="tabs" id="tabs" role="tablist">
+    <button data-v="countries" aria-selected="true"><span class="tnm">Country models</span><span class="tsub">Government position &amp; veto players</span></button>
+    <button data-v="parties" aria-selected="false"><span class="tnm">Party positions</span><span class="tsub">Where each party stands</span></button>
+    <button data-v="eu" aria-selected="false"><span class="tnm">EU institutions</span><span class="tsub">Council, Commission, Parliament</span></button>
+  </nav>
+
+  <main>
+   <div id="view-countries">
+    <section class="card">
+      <div class="hd"><span class="no">1</span><h2>Ideological scale</h2></div>
+      <div class="bd">
+        <div class="dims" id="dims"></div>
+        <div id="cFormulaBox" hidden style="margin-top:12px">
+          <input id="cFormula" type="text" value="per501 - per110"
+            style="width:100%;font-family:var(--mono);font-size:14px;padding:11px 13px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);color:var(--ink)">
+          <div class="note">Your own scale from manifesto categories: <code>+ − * / ( )</code> and numbers, e.g.
+            <code>per501 - per110</code>. Always computed live (~15 s per run, first run also loads R) — there
+            are no instant standard models for a custom scale, and MISFIT/EU_POS are not available here.
+            <a id="cCodes" href="#" style="color:var(--accent-ink)">show available codes</a></div>
+          <div id="cCodeList" data-target="cFormula" hidden class="note mono" style="max-height:120px;overflow:auto"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="hd"><span class="no">2</span><h2>Countries</h2><span class="hint">ISO 3166-1 alpha-3</span></div>
+      <div class="bd">
+        <div class="tools">
+          <button class="preset" data-preset="eu">EU members</button>
+          <button class="preset" data-preset="oecd">OECD-21</button>
+          <button class="preset" data-preset="all">All</button>
+          <button class="preset" data-preset="clear">Clear</button>
+          <span class="count" id="cCount">0 selected</span>
+        </div>
+        <div class="chips" id="chips"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="hd"><span class="no">3</span><h2>Model per country</h2><span class="hint">government · minority · veto players · “+ period” lets a model change over time</span></div>
+      <div class="bd">
+        <div class="scroll"><table><thead><tr><th>Country</th><th>Period</th><th>Government</th><th>Minority</th><th>Veto players</th></tr></thead><tbody id="rows"></tbody></table></div>
+      </div>
+    </section>
+
+    <div class="runrow">
+      <button class="run" id="runBtn" disabled>Run estimation</button>
+      <span class="seglab">Resolution</span>
+      <div class="seg" id="gran" role="group" aria-label="Time resolution">
+        <button data-g="quarterly" aria-pressed="true">Quarterly</button>
+        <button data-g="yearly" aria-pressed="false">Yearly</button>
+      </div>
+      <span class="seglab">Years</span>
+      <span class="chart-sel"><select id="y0Sel"></select> – <select id="y1Sel"></select></span>
+      <span class="status" id="status">loading engine…</span>
+    </div>
+
+    <section class="card" id="results" hidden style="margin-top:22px">
+      <div class="hd"><h2 style="font-family:Georgia,serif;font-size:17px">Results</h2><span class="hint" id="resInfo"></span></div>
+      <div class="bd">
+        <section class="chartcard" id="cChartCard" hidden>
+          <div class="hd"><h3 id="cChartTitle" style="font-family:Georgia,serif;font-size:15px;margin:0"></h3><span class="hint" id="cChartSpan"></span></div>
+          <div class="bd">
+            <div class="chart-sel">chart for <select id="cChartSel"></select></div>
+            <div class="chart-t" id="cChartT"></div>
+            <div class="chart-v" id="cChartV"></div>
+            <figure class="chart" id="cChart"></figure>
+            <div class="chartlegend" id="cChartLegend"></div>
+            <div class="chart-tools">
+              <button type="button" class="chart-dl" data-chart="cChart" data-name="pip_chart_country">Download PNG</button>
+              <button type="button" class="chart-copy" data-chart="cChart">Copy image</button>
+              <span class="chart-status" id="cChartStatus"></span>
+            </div>
+          </div>
+        </section>
+
+        <div class="dl">
+          <button class="dlbtn" data-fmt="csv"><span class="x">.csv</span> Plain text</button>
+          <button class="dlbtn" data-fmt="xlsx"><span class="x">.xlsx</span> Excel</button>
+          <button class="dlbtn" data-fmt="dta"><span class="x">.dta</span> Stata</button>
+          <button class="dlbtn" data-fmt="rds"><span class="x">.rds</span> R</button>
+        </div>
+        <div class="note" id="dlNote"><strong>VP_RANGE</strong> uses only the national veto players ticked below;
+        <strong>VP_RANGE_EU</strong> adds the EU as an extra veto player (never narrower than VP_RANGE, and only
+        different during actual EU membership) — compare the two directly to see the EU's added constraint.
+        <strong>EU_POS</strong> is the EU position in the same quarter and scale;
+        <strong>MISFIT</strong> = EU_POS − GOV_POS, i.e. how far the government sits from the EU
+        (negative = government to the right of the EU). All three EU-related columns are empty while a country
+        is not an EU member.
+        Browse all rows with the pager below the table; downloads always contain the full series. <strong>.csv</strong> is instant. <strong>.xlsx</strong> (Excel), <strong>.dta</strong> (Stata) and <strong>.rds</strong> (R) are written by R in your browser — the first such download loads the R engine once (~30 s), then it is quick.</div>
+
+        <div class="scroll"><table id="resTable"><thead></thead><tbody></tbody></table></div>
+        <div class="pager" id="cPager"></div>
+      </div>
+    </section>
+   </div><!-- /view-countries -->
+
+   <div id="view-parties" hidden>
+    <section class="card">
+      <div class="hd"><span class="no">1</span><h2>Ideological scale</h2></div>
+      <div class="bd">
+        <div class="dims" id="pDims"></div>
+        <div id="pFormulaBox" hidden style="margin-top:12px">
+          <input id="pFormula" type="text" value="per501 - per110"
+            style="width:100%;font-family:var(--mono);font-size:14px;padding:11px 13px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);color:var(--ink)">
+          <div class="note">Your own scale from manifesto categories: <code>+ − * / ( )</code> and numbers, e.g.
+            <code>per501 - per110</code> (environment vs. anti-environment), <code>(per101 + per107)/2</code>.
+            Always computed live (~15 s, first run also loads R) — there is no instant standard model for a
+            custom scale. <a id="pCodes" href="#" style="color:var(--accent-ink)">show available codes</a></div>
+          <div id="pCodeList" data-target="pFormula" hidden class="note mono" style="max-height:120px;overflow:auto"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="hd"><span class="no">2</span><h2>Countries</h2><span class="hint" id="pCountriesHint">party positions are read directly from the data — no model needed</span></div>
+      <div class="bd">
+        <div class="tools">
+          <button class="preset" data-ppreset="eu">EU members</button>
+          <button class="preset" data-ppreset="oecd">OECD-21</button>
+          <button class="preset" data-ppreset="clear">Clear</button>
+          <span class="count" id="pCount">0 selected</span>
+        </div>
+        <div class="chips" id="pChips"></div>
+      </div>
+    </section>
+
+    <div class="runrow">
+      <button class="run" id="pRunBtn" disabled>Show party positions</button>
+      <span class="seglab">Resolution</span>
+      <div class="seg" id="pGran" role="group" aria-label="Time resolution">
+        <button data-g="quarterly" aria-pressed="true">Quarterly</button>
+        <button data-g="yearly" aria-pressed="false">Yearly</button>
+      </div>
+      <span class="seglab">Years</span>
+      <span class="chart-sel"><select id="py0Sel"></select> – <select id="py1Sel"></select></span>
+      <span class="status" id="pStatus">loading party data…</span>
+    </div>
+
+    <section class="card" id="pResults" hidden style="margin-top:22px">
+      <div class="hd"><h2 style="font-family:Georgia,serif;font-size:17px">Party positions</h2><span class="hint" id="pResInfo"></span></div>
+      <div class="bd">
+        <section class="chartcard" id="pChartCard" hidden>
+          <div class="hd"><h3 id="pChartTitle" style="font-family:Georgia,serif;font-size:15px;margin:0"></h3><span class="hint" id="pChartSpan"></span></div>
+          <div class="bd">
+            <div class="chart-sel">chart for <select id="pChartSel"></select><span id="pChartScaleWrap"> on <select id="pChartScale">
+              <option value="LR">LR</option><option value="GG">GG</option><option value="RILE">RILE</option></select></span></div>
+            <div class="chart-t" id="pChartT"></div>
+            <figure class="chart" id="pChart"></figure>
+            <div class="chartlegend" id="pChartLegend"></div>
+            <div class="chart-tools">
+              <button type="button" class="chart-dl" data-chart="pChart" data-name="pip_chart_parties">Download PNG</button>
+              <button type="button" class="chart-copy" data-chart="pChart">Copy image</button>
+              <span class="chart-status" id="pChartStatus"></span>
+            </div>
+          </div>
+        </section>
+
+        <div class="dl">
+          <button class="dlbtn" data-pfmt="csv"><span class="x">.csv</span> Plain text</button>
+          <button class="dlbtn" data-pfmt="xlsx"><span class="x">.xlsx</span> Excel</button>
+          <button class="dlbtn" data-pfmt="dta"><span class="x">.dta</span> Stata</button>
+          <button class="dlbtn" data-pfmt="rds"><span class="x">.rds</span> R</button>
+        </div>
+        <div class="note" id="pResNote">Columns: <strong>LR</strong> (Left–Right), <strong>GG</strong> (Green–Growth), <strong>RILE</strong>, <strong>COH</strong> (cohesion) — the interpolated quarterly series per party. Yearly shows the per-party annual mean.</div>
+
+        <div class="scroll"><table id="pResTable"><thead></thead><tbody></tbody></table></div>
+        <div class="pager" id="pPager"></div>
+      </div>
+    </section>
+   </div><!-- /view-parties -->
+
+   <div id="view-eu" hidden>
+    <section class="card">
+      <div class="hd"><span class="no">1</span><h2>Ideological scale</h2><span class="hint">EU-wide positions — no country selection needed</span></div>
+      <div class="bd">
+        <div class="dims" id="euDims"></div>
+        <div id="euFormulaBox" hidden style="margin-top:12px">
+          <input id="euFormula" type="text" value="per501 - per110"
+            style="width:100%;font-family:var(--mono);font-size:14px;padding:11px 13px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);color:var(--ink)">
+          <div class="note">Your own scale from manifesto categories, e.g. <code>per501 - per110</code>.
+            EU institutions are always computed live on a custom scale — this re-estimates every
+            country's government position first, so it is noticeably slower than a custom country
+            model. <strong style="color:var(--crit)">Expect around 10 minutes</strong> (more on the
+            first run while R loads). Press “Show EU positions” below to run.
+            <a id="euCodes" href="#" style="color:var(--accent-ink)">show available codes</a></div>
+          <div id="euCodeList" data-target="euFormula" hidden class="note mono" style="max-height:120px;overflow:auto"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="hd"><span class="no">2</span><h2>Institutional models</h2><span class="hint">“Default” = historically correct per treaty period</span></div>
+      <div class="bd">
+        <div class="scroll"><table><thead><tr><th>Institution</th><th>Model</th></tr></thead><tbody>
+          <tr><td class="ctry">European Council</td><td><select id="euCouncil">
+            <option value="default">Default (per period)</option><option value="power">Power (weights)</option>
+            <option value="mean">Mean</option><option value="median">Median</option><option value="unanimity">Unanimity</option></select></td></tr>
+          <tr><td class="ctry">Commission</td><td><select id="euCommission">
+            <option value="default">Default (per period)</option><option value="bargaining">Bargaining</option>
+            <option value="mean">Mean</option><option value="median">Median</option><option value="unanimity">Unanimity</option></select></td></tr>
+          <tr><td class="ctry">Council of Ministers</td><td><select id="euCouncilmin">
+            <option value="default">Default (per period)</option><option value="qmv1_uw">QMV (fixed presidency)</option>
+            <option value="qmv2_uw">QMV (rotating, 2010+)</option><option value="mean_uw">Mean</option>
+            <option value="median_uw">Median</option><option value="unanimity">Unanimity</option></select></td></tr>
+          <tr><td class="ctry">European Parliament</td><td><select id="euParl">
+            <option value="default">Default (median)</option><option value="mean_uw">Mean</option>
+            <option value="median_uw">Median</option><option value="unanimity">Unanimity</option></select></td></tr>
+          <tr><td class="ctry">Council as principal</td><td><label class="vp" style="display:inline-flex"><label><input type="checkbox" id="euPrincipal" checked> agent positions blended with European Council</label></label></td></tr>
+        </tbody></table></div>
+      </div>
+    </section>
+
+    <div class="runrow">
+      <button class="run" id="euRunBtn" disabled>Show EU positions</button>
+      <span class="seglab">Resolution</span>
+      <div class="seg" id="euGran" role="group" aria-label="Time resolution">
+        <button data-g="quarterly" aria-pressed="true">Quarterly</button>
+        <button data-g="yearly" aria-pressed="false">Yearly</button>
+      </div>
+      <span class="seglab">Years</span>
+      <span class="chart-sel"><select id="euy0Sel"></select> – <select id="euy1Sel"></select></span>
+      <span class="status" id="euStatus">loading EU data…</span>
+    </div>
+
+    <section class="card" id="euResults" hidden style="margin-top:22px">
+      <div class="hd"><h2 style="font-family:Georgia,serif;font-size:17px">EU positions</h2><span class="hint" id="euResInfo"></span></div>
+      <div class="bd">
+        <section class="chartcard" id="euChartCard" hidden>
+          <div class="hd"><h3 style="font-family:Georgia,serif;font-size:15px;margin:0">European Union</h3><span class="hint" id="euChartSpan"></span></div>
+          <div class="bd">
+            <div class="chart-t" id="euChartT">EU institutions over time</div>
+            <div class="chart-v" id="euChartV"></div>
+            <figure class="chart" id="euChart"></figure>
+            <div class="chartlegend" id="euChartLegend"></div>
+            <div class="chart-tools">
+              <button type="button" class="chart-dl" data-chart="euChart" data-name="pip_chart_eu">Download PNG</button>
+              <button type="button" class="chart-copy" data-chart="euChart">Copy image</button>
+              <span class="chart-status" id="euChartStatus"></span>
+            </div>
+          </div>
+        </section>
+
+        <div class="dl">
+          <button class="dlbtn" data-efmt="csv"><span class="x">.csv</span> Plain text</button>
+          <button class="dlbtn" data-efmt="xlsx"><span class="x">.xlsx</span> Excel</button>
+          <button class="dlbtn" data-efmt="dta"><span class="x">.dta</span> Stata</button>
+          <button class="dlbtn" data-efmt="rds"><span class="x">.rds</span> R</button>
+        </div>
+        <div class="note"><strong>EUCOU</strong> European Council · <strong>COMM</strong> Commission · <strong>COUNCIL</strong> Council of Ministers · <strong>EP</strong> European Parliament · <strong>EU_POS</strong> overall EU position (legislative-process blend per treaty period). Default institutional models per Jahn &amp; Düpont.</div>
+
+        <div class="scroll"><table id="euResTable"><thead></thead><tbody></tbody></table></div>
+        <div class="pager" id="euPager"></div>
+      </div>
+    </section>
+   </div><!-- /view-eu -->
+  </main>
+  <footer>
+    <strong>PIP — Indices &amp; Models</strong> · runs entirely in your browser via WebR · part of “PIP – Parties, Institutions &amp; Preferences”, University of Greifswald.<br>
+    Method: Jahn (2016), <em>The Politics of Environmental Performance</em>, Cambridge University Press · EU estimates: Jahn &amp; Düpont (2015), “Estimating the Position of the European Union”. Please cite these when using the data.
+  </footer>
+</div>
+
+<script type="module">
+import { WebR } from 'https://webr.r-wasm.org/latest/webr.mjs';
+
+// --- Modell-Optionen (Engine-Faehigkeiten; selten geaendert -> bleiben hier) ---
+const GOV=[["seats","Weighted by seats"],["cabmem","Cabinet members"],["portfolios","Portfolios"],["uwmean","Unweighted mean"],
+  ["pm","Prime Minister"],["minister","Minister(s) — choose below"],["pmnegot","PM negotiated with minister(s)"],["unanimity","Unanimity"]];
+// Ressorts (p2xx) aus den PIP-Daten. Die Engine nimmt das 1. Ressort und faellt, wenn es das Land in
+// dem Quartal nicht hat, auf das 2. zurueck (danach auf Sitzanteile) — s. gov_minister() in lib_aspm.R.
+const PORTF=[["p201","Prime Minister"],["p202","Deputy"],["p203","Foreign affairs"],["p204","Defence"],
+  ["p205","Interior"],["p206","Justice"],["p207","Finance"],["p208","Economic affairs"],["p209","Labour"],
+  ["p210","Education"],["p211","Health"],["p212","Housing"],["p213","Agriculture"],["p214","Industry & trade"],
+  ["p215","Environment"],["p216","Social affairs"],["p217","Public works"],["p218","Other ministers"]];
+const YEAR_MIN=1945, YEAR_MAX=2023;
+const MIN=[["no","No"],["yes;antisys:no","Yes (MCWC)"]];
+const VP=[["gov","gov"],["1ch","1st ch."],["2ch","2nd ch."],["pres","pres"]];
+
+// --- Config aus CSV: Dimensionen & Laender (leicht editierbar in config/*.csv) ---
+let DIMS=[], DIMKEY={};                 // DIMS: [col,label,key] ; DIMKEY[col]=key (DEF-Schluessel)
+let C=[], EU=[], OECD=[];               // C: [iso3,name,num,spec]
+const NAME={}, NUM={}, SPEC={}, N2NAME={};
+const ctryName=n=>N2NAME[String(n)]||n;
+
+// x-Achsen-Tickabstand: runde Jahresschritte (5 Jahre als Regelfall, s. Nutzerwunsch).
+function niceYearTicks(y0,y1){
+  const span=y1-y0; let step=5;                 // 5-Jahres-Schritte als Regelfall
+  if(span<=8) step=1; else if(span<=20) step=2; else if(span<=300) step=5; else step=10;
+  const first=Math.ceil(y0/step)*step, ticks=[];
+  for(let y=first;y<=y1+1e-6;y+=step) ticks.push(y);
+  if(!ticks.length) ticks.push(Math.round(y0));
+  return ticks;
+}
+// "Schoene" Schrittweite (1/2/5 * 10^n) fuer eine Achse mit ~targetTicks Markierungen - gleiches
+// Prinzip wie niceYearTicks, aber fuer beliebige Wertebereiche (nicht nur Jahre).
+function niceStep(range, targetTicks){
+  const raw=range/Math.max(1,targetTicks), mag=Math.pow(10, Math.floor(Math.log10(raw||1))), norm=raw/mag;
+  return (norm<1.5?1: norm<3?2: norm<7?5:10)*mag;
+}
+function niceValueTicks(lo,hi){
+  const step=niceStep(hi-lo, 5), first=Math.ceil(lo/step)*step, ticks=[];
+  for(let v=first; v<=hi+1e-9; v+=step) ticks.push(Math.round(v/step)*step);
+  return {ticks, step};
+}
+function fmtTick(v, step){
+  const dec = step>=1 ? 0 : Math.min(3, Math.max(0, -Math.floor(Math.log10(step))));
+  return (+v.toFixed(dec)).toString();
+}
+// Generische SVG-Liniengrafik. series: [{pts:[[year(+quarter-fraction),y],...], color, width, opacity, dash}]
+function lineChartSVG(series){
+  const w=640,h=300,padT=10,padR=16,padB=30,padL=44;   // padL breiter: Platz fuer Y-Achsen-Beschriftung
+  const xs=series.flatMap(s=>s.pts.map(p=>p[0])), ys=series.flatMap(s=>s.pts.map(p=>p[1])).filter(v=>v!=null&&!isNaN(v));
+  if(!xs.length||!ys.length) return '<div class="hint">no data to chart</div>';
+  const x0=Math.min(...xs), x1=Math.max(...xs);
+  let lo=Math.min(...ys), hi=Math.max(...ys); if(lo===hi){lo-=1;hi+=1;} const pd=(hi-lo)*0.1; lo-=pd; hi+=pd;
+  const X=x=> x1===x0? padL+(w-padL-padR)/2 : padL+(x-x0)*(w-padL-padR)/(x1-x0);
+  const Y=y=> h-padB-(y-lo)*(h-padT-padB)/(hi-lo);
+  let s=`<svg viewBox="0 0 ${w} ${h}" width="100%" role="img">`;
+  // Y-Achse: Wertebereich als horizontale Gitterlinien + Beschriftung links.
+  const {ticks:yTicks, step:yStep}=niceValueTicks(lo,hi);
+  yTicks.forEach(tv=>{
+    const yy=Y(tv).toFixed(1);
+    s+=`<line x1="${padL}" y1="${yy}" x2="${w-padR}" y2="${yy}" stroke="var(--line)" stroke-width="1"/>`;
+    s+=`<text x="${padL-6}" y="${(+yy+3).toFixed(1)}" font-size="9" fill="var(--muted)" text-anchor="end">${fmtTick(tv,yStep)}</text>`;
+  });
+  niceYearTicks(x0,x1).forEach(ty=>{
+    const xx=X(ty).toFixed(1);
+    s+=`<line x1="${xx}" y1="${padT}" x2="${xx}" y2="${h-padB}" stroke="var(--line)" stroke-width="1"/>`;
+    s+=`<text x="${xx}" y="${h-6}" font-size="9" fill="var(--muted)" text-anchor="middle">${Math.round(ty)}</text>`;
+  });
+  if(lo<0&&hi>0) s+=`<line x1="${padL}" y1="${Y(0).toFixed(1)}" x2="${w-padR}" y2="${Y(0).toFixed(1)}" stroke="var(--line)" stroke-width="1.4"/>`;
+  // Beim Hovern wird die ganze Linie dicker: jede Serie steckt in einer <g>, die sichtbare Linie
+  // referenziert ihre Basisbreite ueber die lokale CSS-Variable --sw, damit .lseries:hover sie per
+  // calc() verdicken kann (funktioniert fuer jede Linienbreite, ohne Werte hart zu kodieren).
+  s+=`<style>.lseries .lvis{transition:stroke-width .1s} .lseries:hover .lvis{stroke-width:calc(var(--sw) * 1.8)} .lseries:hover .lend{r:5}</style>`;
+  series.forEach(sr=>{
+    const pts=sr.pts.filter(p=>p[1]!=null&&!isNaN(p[1])); if(!pts.length) return;
+    const d=pts.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');
+    const last=pts[pts.length-1], w0=sr.width||2.2;
+    s+=`<g class="lseries">`;
+    // stroke-width als normales Attribut (Basiswert), NICHT als Inline-Style: Inline-Styles gewinnen
+    // immer gegen Regeln aus einem <style>-Tag, egal wie spezifisch - die Hover-Regel unten koennte
+    // ein per Inline-Style gesetztes stroke-width nie ueberschreiben. --sw bleibt als reine Custom-
+    // Property inline (das ist nur eine Variablen-Deklaration, keine Eigenschafts-Zuweisung).
+    s+=`<path class="lvis" d="${d}" fill="none" stroke="${sr.color}" stroke-width="${w0}" style="--sw:${w0}"${sr.opacity?` stroke-opacity="${sr.opacity}"`:''}${sr.dash?` stroke-dasharray="${sr.dash}"`:''} stroke-linecap="round" stroke-linejoin="round"/>`;
+    s+=`<circle class="lend" cx="${X(last[0]).toFixed(1)}" cy="${Y(last[1]).toFixed(1)}" r="3.2" fill="${sr.color}"${sr.opacity?` fill-opacity="${sr.opacity}"`:''}/>`;
+    // Unsichtbare, breitere Trefferflaeche in derselben Gruppe - duenne Linien sind sonst kaum zu
+    // treffen; <title> zeigt den Namen als natives Browser-Tooltip, das Hovern darauf verdickt "lvis".
+    if(sr.label) s+=`<path d="${d}" fill="none" stroke="transparent" stroke-width="14" style="cursor:default"><title>${xmlEsc(sr.label)}</title></path>`;
+    s+=`</g>`;
+  });
+  s+="</svg>";
+  return s;
+}
+function xmlEsc(t){ return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+// Neutrale Grautoene fuer Parteien ohne erkannte Familie — bewusst KEINE Ueberschneidung mit
+// den kraeftigen FAMILY_COLORS-Farben weiter unten, sonst kollidieren Fallback- und Familienfarbe.
+const PALETTE=["#6B7280","#8D99AE","#5C6B73","#94A3B8","#7A8B99","#525F6B","#8A94A6","#6E7B8B","#5E6E78","#78716C"];
+function colorFor(key,idx){ return PALETTE[idx%PALETTE.length]; }
+
+// Farbe nach politischer Familie (Parteiname), damit z.B. Gruene immer gruen, Linke immer rot sind —
+// unabhaengig von Auswahl-Reihenfolge. Fallback auf PALETTE wenn kein Muster passt.
+const FAMILY_COLORS=[
+  [/green|grün|gruen|vert|verde|verdi|miljö|miljo|ecolog|environ/i, "#3E8E5A"],
+  [/communist|kommunist|maoist|marxist/i, "#8B1E3F"],
+  [/\bleft\b|linke|links(?!wirtschaft)|gauche|izquierda|vänster|vanster|venstre(?!parti)/i, "#C0453F"],
+  [/social democrat|sozialdemokrat|labour|labor|socialist(?!e populaire)|socialdemokrat|parti socialiste|\bpsoe\b|\bspd\b/i, "#E2001A"],
+  [/liberal|free democrat|\bfdp\b|radikale|venstre\b|freisinn/i, "#E8B800"],
+  [/christian|conservative|konservativ|christdemokrat|popular party|volkspartei|\bcdu\b|\bcsu\b|moderate/i, "#2E5EAA"],
+  [/national(?!e écologie)|freedom party|\bafd\b|front national|rassemblement|patriot|populist/i, "#5A4632"],
+  [/agrarian|farmer|centre party|center party|centerpartiet|country party/i, "#9A7B3F"],
+  [/regional|autonomist|nationalist party|separatist/i, "#7B4FA0"],
+];
+function familyColor(name){
+  if(!name) return null;
+  for(const [re,col] of FAMILY_COLORS) if(re.test(name)) return col;
+  return null;
+}
+// Farben fuer eine Liste von Parteien vergeben: Familienfarbe zuerst, bei Kollision (z.B. zwei
+// gruene Parteien gleichzeitig) faellt die zweite auf die naechste freie Palettenfarbe zurueck.
+function assignPartyColors(parties){
+  const used=new Set(), colors={};
+  parties.forEach(([code,nm])=>{
+    let c=familyColor(nm);
+    if(!c||used.has(c)) c=PALETTE.find(p=>!used.has(p)) || PALETTE[used.size%PALETTE.length];
+    used.add(c); colors[code]=c;
+  });
+  return colors;
+}
+
+// Jahresbereich-Filter: Dropdowns aus vollem Datenbereich befuellen, Zeilen auf [y0,y1] einschraenken.
+function populateYearSel(selId0, selId1, years, stObj, k0, k1){
+  if(!years.length) return;
+  const lo=Math.min(...years), hi=Math.max(...years);
+  if(stObj[k0]==null){ stObj[k0]=lo; stObj[k1]=hi; }
+  stObj[k0]=Math.max(lo,Math.min(stObj[k0],hi)); stObj[k1]=Math.max(lo,Math.min(stObj[k1],hi));
+  const opts=y=>{let o="";for(let x=lo;x<=hi;x++)o+=`<option value="${x}"${x===y?" selected":""}>${x}</option>`;return o;};
+  $("#"+selId0).innerHTML=opts(stObj[k0]); $("#"+selId1).innerHTML=opts(stObj[k1]);
+}
+function filterYears(rows, yIdx, y0, y1){ return rows.filter(r=> +r[yIdx]>=y0 && +r[yIdx]<=y1); }
+// Chart-x-Werte: Jahr + Quartalsbruchteil. "quarter"/"techq" sind laufende Zaehler (z.B. -62..243),
+// KEINE Kalenderquartale 1-4 - deshalb Bruchteil aus der Position innerhalb des Jahres ableiten
+// (rows muss chronologisch sortiert sein, was present()/presentP()/presentEU() bereits sicherstellen).
+function yearFractions(rows, yi){
+  const counts={};
+  return rows.map(r=>{ const y=+r[yi]; const c=counts[y]||0; counts[y]=c+1; return y+c/4; });
+}
+
+// Chart als PNG exportieren: CSS-Variablen (var(--accent) etc.) muessen vor dem Export in echte
+// Farbwerte aufgeloest werden, da ein isoliertes <img>-SVG keinen Zugriff auf :root-CSS hat.
+function resolveSvgVars(svgEl){
+  const clone=svgEl.cloneNode(true);
+  const cs=getComputedStyle(document.documentElement);
+  const resolve=v=>{ const m=v&&v.match(/var\((--[a-zA-Z0-9-]+)\)/); return m? (cs.getPropertyValue(m[1]).trim()||v) : v; };
+  clone.querySelectorAll("*").forEach(el=>{
+    ["stroke","fill"].forEach(attr=>{ const v=el.getAttribute(attr); if(v&&v.includes("var(")) el.setAttribute(attr,resolve(v)); });
+  });
+  const bg=cs.getPropertyValue("--surface").trim()||"#fff";
+  const vb=svgEl.getAttribute("viewBox")||"0 0 640 300";
+  const rect=document.createElementNS("http://www.w3.org/2000/svg","rect");
+  rect.setAttribute("x",vb.split(" ")[0]); rect.setAttribute("y",vb.split(" ")[1]);
+  rect.setAttribute("width",vb.split(" ")[2]); rect.setAttribute("height",vb.split(" ")[3]); rect.setAttribute("fill",bg);
+  clone.insertBefore(rect, clone.firstChild);
+  return clone;
+}
+function svgToPngBlob(svgEl, scale){
+  scale=scale||2;
+  return new Promise((resolve,reject)=>{
+    const clone=resolveSvgVars(svgEl);
+    const vb=(svgEl.getAttribute("viewBox")||"0 0 640 300").split(" ").map(Number);
+    const w=vb[2], h=vb[3];
+    const xml=new XMLSerializer().serializeToString(clone);
+    const svg64=btoa(unescape(encodeURIComponent(xml)));
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement("canvas");
+      canvas.width=w*scale; canvas.height=h*scale;
+      const ctx=canvas.getContext("2d");
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      canvas.toBlob(b=> b?resolve(b):reject(new Error("toBlob failed")), "image/png");
+    };
+    img.onerror=()=>reject(new Error("could not rasterize chart"));
+    img.src="data:image/svg+xml;base64,"+svg64;
+  });
+}
+async function chartDownloadPNG(chartId, nameBase, statusEl){
+  const svg=document.querySelector("#"+chartId+" svg"); if(!svg) return;
+  try{
+    const blob=await svgToPngBlob(svg);
+    const d=new Date(), p=n=>String(n).padStart(2,"0");
+    const ts=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
+    const u=URL.createObjectURL(blob), a=document.createElement("a");
+    a.href=u; a.download=nameBase+"_"+ts+".png"; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),1000);
+  }catch(e){ if(statusEl) statusEl.textContent="download failed: "+e.message; }
+}
+async function chartCopyPNG(chartId, statusEl){
+  const svg=document.querySelector("#"+chartId+" svg"); if(!svg) return;
+  try{
+    const blob=await svgToPngBlob(svg);
+    await navigator.clipboard.write([new ClipboardItem({"image/png":blob})]);
+    if(statusEl){ statusEl.textContent="copied!"; setTimeout(()=>{ if(statusEl.textContent==="copied!") statusEl.textContent=""; },1800); }
+  }catch(e){ if(statusEl) statusEl.textContent="copy not supported here — use download"; }
+}
+document.addEventListener("click",e=>{
+  const dl=e.target.closest(".chart-dl"); if(dl){ const card=dl.closest(".chartcard");
+    chartDownloadPNG(dl.dataset.chart, dl.dataset.name, card&&card.querySelector(".chart-status")); return; }
+  const cp=e.target.closest(".chart-copy"); if(cp){ const card=cp.closest(".chartcard");
+    chartCopyPNG(cp.dataset.chart, card&&card.querySelector(".chart-status")); return; }
+});
+
+// CSV-Parser mit Quote-Unterstuetzung (default_spec enthaelt Kommas)
+function parseCSV(text){
+  const rows=[]; let i=0,f="",row=[],q=false;
+  while(i<text.length){ const ch=text[i];
+    if(q){ if(ch=='"'){ if(text[i+1]=='"'){f+='"';i+=2;continue;} q=false;i++;continue;} f+=ch;i++;continue; }
+    if(ch=='"'){q=true;i++;continue;}
+    if(ch==','){row.push(f);f="";i++;continue;}
+    if(ch=='\n'){row.push(f);rows.push(row);row=[];f="";i++;continue;}
+    if(ch=='\r'){i++;continue;}
+    f+=ch;i++; }
+  if(f.length||row.length){row.push(f);rows.push(row);}
+  return rows;
+}
+async function loadConfig(){
+  const [dimTxt,ctyTxt]=await Promise.all([
+    fetch("config/dimensions.csv").then(r=>r.text()),
+    fetch("config/countries.csv").then(r=>r.text())]);
+  parseCSV(dimTxt.trim()).slice(1).forEach(r=>{ if(!r[0])return;
+    DIMS.push([r[2],r[1],r[0]]); DIMKEY[r[2]]=r[0]; });      // col,label,key
+  parseCSV(ctyTxt.trim()).slice(1).forEach(r=>{ if(!r[0])return;
+    const iso3=r[0],num=+r[1],name=r[2],eu=r[3]=="1",oecd=r[4]=="1",spec=r[5];
+    C.push([iso3,name,num,spec]); NAME[iso3]=name; NUM[iso3]=num; SPEC[iso3]=spec; N2NAME[String(num)]=name;
+    if(eu)EU.push(iso3); if(oecd)OECD.push(iso3); });
+  st.dim=DIMS[0][0];
+  st.sel=st.sel.filter(i=>NAME[i]); if(!st.sel.length) st.sel=C.slice(0,3).map(c=>c[0]);
+  st.sel.forEach(ensureModel);
+  render();
+}
+
+const st={dim:"",gran:"quarterly",sel:["GER","FRA","SWE"],models:{},modified:{},chartIso:null,
+          pg:{c:0,p:0,eu:0,ci:0}};
+const $=s=>document.querySelector(s);
+
+// ===== Geteilte Tabellenanzeige mit Blaettern (alle 4 Reiter) =====
+// Je Reiter: Datenquelle, Ziel-Tabelle, Spaltenkoepfe, Zeilenumbau (Laendername einfuegen) und
+// welche Spalten in Monospace stehen. Seitenwechsel zeichnet NUR Tabelle+Pager neu (kein present()),
+// damit die Seite nicht wegspringt.
+const PAGE_SIZE=50;
+const TBL={
+  c:  {rows:()=>lastRows,   tbl:"#resTable",   pager:"#cPager",
+       out:()=>["iso","country",...curOUT().slice(1)], xf:r=>[r[0],ctryName(r[0]),...r.slice(1)],
+       mono:i=> i<((st.gran==="yearly"?2:4)+1) && i!==1},
+  p:  {rows:()=>pLastRows,  tbl:"#pResTable",  pager:"#pPager",
+       out:()=>["iso","country",...pOUT().slice(1)], xf:r=>[r[0],ctryName(r[0]),...r.slice(1)],
+       // nach dem country-Einschub: 0=iso,1=country,2=year,[3=quarter,4=techq,]party,name
+       mono:i=>{ const y=st.pgran==="yearly", nameI=y?4:6, n=y?5:7; return i<n && i!==1 && i!==nameI; }},
+  eu: {rows:()=>euLastRows, tbl:"#euResTable", pager:"#euPager",
+       out:()=>euOUT(), xf:r=>r,
+       mono:i=> i<(st.euGran==="yearly"?1:3)},
+};
+function pageCount(n){ return Math.max(1, Math.ceil(n/PAGE_SIZE)); }
+function renderTable(key){
+  const c=TBL[key], rows=c.rows()||[], OUT=c.out(), pages=pageCount(rows.length);
+  st.pg[key]=Math.min(pages-1, Math.max(0, st.pg[key]||0));
+  const a=st.pg[key]*PAGE_SIZE, part=rows.slice(a, a+PAGE_SIZE);
+  $(c.tbl+" thead").innerHTML="<tr>"+OUT.map(h=>`<th>${h.toUpperCase()}</th>`).join("")+"</tr>";
+  $(c.tbl+" tbody").innerHTML=part.map(r=>"<tr>"+c.xf(r).map((v,i)=>
+      `<td class="${c.mono(i)?'mono':''}">${v}</td>`).join("")+"</tr>").join("");
+  const b=(d,lab,off)=>`<button class="pgbtn" data-pg="${key}" data-d="${d}"${off?" disabled":""}>${lab}</button>`;
+  const first=st.pg[key]===0, last=st.pg[key]>=pages-1;
+  $(c.pager).innerHTML = rows.length ?
+    b("first","« first",first)+b("-1","‹ prev",first)+
+    `<span class="pginfo">${(a+1).toLocaleString("en-US")}–${Math.min(a+PAGE_SIZE,rows.length).toLocaleString("en-US")}`+
+    ` of ${rows.length.toLocaleString("en-US")}  (page ${st.pg[key]+1}/${pages})</span>`+
+    b("1","next ›",last)+b("last","last »",last) : "";
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest(".pgbtn"); if(!b) return;
+  const key=b.dataset.pg, d=b.dataset.d, pages=pageCount((TBL[key].rows()||[]).length);
+  st.pg[key] = d==="first" ? 0 : d==="last" ? pages-1 : Math.min(pages-1, Math.max(0, st.pg[key]+ +d));
+  renderTable(key);
+});
+
+// Ein Land hat 1..n Zeitsegmente: st.models[iso] = [{from,gov,portf,min,vp}, ...], nach `from` sortiert.
+// Segment 0 gilt ab Datenbeginn (from=null), jedes weitere ab seinem Startjahr.
+function parse(spec){ // spec-string -> Segment
+  const gv=(spec.match(/gov\(([^)]*)\)/)||[])[1]||"seats";
+  const mn=(spec.match(/minority\(([^)]*)\)/)||[])[1]||"no";
+  const vp=((spec.match(/vp\(([^)]*)\)/)||[])[1]||"gov").split(",").map(s=>s.trim());
+  let gov=gv, portf=null;
+  const mm=gv.match(/^(minister|pmnegot):(.*)$/);
+  if(mm){ gov=mm[1]; portf=mm[2].trim()==="cabinet"?["cabinet"]:mm[2].split(",").map(s=>s.trim()).filter(Boolean); }
+  return {from:null, gov, portf, min:mn.includes("yes")?mn:"no", vp};
+}
+function segSpec(sg){  // Segment -> Config-String fuer die Engine
+  let gv=sg.gov;
+  if(sg.gov==="minister"||sg.gov==="pmnegot"){
+    const pf=(sg.portf||[]).filter(Boolean);
+    gv=sg.gov+":"+(pf.length?pf.join(","):"p215");
+  }
+  return `gov(${gv}) minority(${sg.min}) vp(${sg.vp.join(",")})`;
+}
+function ensureModel(iso){ if(!st.models[iso]) st.models[iso]=[parse(SPEC[iso])]; }
+function sortSegs(iso){ st.models[iso].sort((a,b)=>(a.from??-1e9)-(b.from??-1e9)); }
+
+// Pole je Skala fuer den Farbverlauf unter der Kachel. RILE ist bewusst gedaempft (nachrangige Skala).
+const DIMMETA={ LR:{a:"left",b:"right"}, GG:{a:"green",b:"growth"},
+                RILE:{a:"left",b:"right"}, custom:{a:"low",b:"high"} };
+function spectrumHTML(key){
+  const m=DIMMETA[key]; if(!m) return "";
+  return `<div class="spectrum sp-${key}"></div><div class="poles"><span>${m.a}</span><span>${m.b}</span></div>`;
+}
+function dimTile(attr, val, label, code, sel, key){
+  return `<button class="dim${key==="RILE"?" dim-minor":""}" ${attr}="${val}" aria-pressed="${sel}">`+
+         `<span class="nm">${label}</span><span class="cd">${code}</span>${spectrumHTML(key)}</button>`;
+}
+function dims(){
+  $("#dims").innerHTML=DIMS.map(d=>dimTile("data-d",d[0],d[1],d[2],st.dim===d[0],d[2])).join("")+
+    dimTile("data-d","custom","Custom","your formula",st.dim==="custom","custom");
+  $("#cFormulaBox").hidden = st.dim!=="custom";
+}
+function chips(){$("#chips").innerHTML=C.map(c=>`<button class="chip" data-iso="${c[0]}" aria-pressed="${st.sel.includes(c[0])}" title="${c[1]} · ${c[2]}">${c[0]}</button>`).join("");$("#cCount").textContent=st.sel.length+" selected";}
+function yearOpts(y){ let o=""; for(let x=YEAR_MIN;x<=YEAR_MAX;x++) o+=`<option value="${x}"${x===y?" selected":""}>${x}</option>`; return o; }
+function portfSel(sg){          // zwei Ressort-Selects: 1. Wahl, 2. Wahl (Fallback)
+  if(sg.gov!=="minister"&&sg.gov!=="pmnegot") return "";
+  const pf=sg.portf||[], extra = sg.gov==="pmnegot" ? [["cabinet","Whole cabinet"]] : [];
+  const opts=(sel,none)=> (none?`<option value="">— none —</option>`:"")+
+    PORTF.concat(extra).map(o=>`<option value="${o[0]}"${o[0]===sel?" selected":""}>${o[1]}</option>`).join("");
+  return `<div class="portf"><label>1st <select data-k="pf0">${opts(pf[0]||"p215",false)}</select></label>`+
+         `<label>then <select data-k="pf1">${opts(pf[1]||"",true)}</select></label></div>`;
+}
+function rows(){
+  const b=$("#rows"); if(!st.sel.length){b.innerHTML='<tr><td colspan="5" style="color:var(--muted);padding:14px">Select at least one country.</td></tr>';return;}
+  b.innerHTML=st.sel.map(iso=>{ ensureModel(iso);
+    const tag=st.modified[iso]?` <span class="custtag">custom</span>`:"";
+    return st.models[iso].map((sg,k)=>{
+      const isSpecial=/special_aspm/.test(sg.gov);
+      const g=GOV.map(o=>`<option value="${o[0]}"${o[0]===sg.gov?" selected":""}>${o[1]}</option>`).join("");
+      const govsel = isSpecial ? `<span class="mono" style="font-size:12px">special (${iso})</span>`
+                               : `<select data-k="gov">${g}</select>`+portfSel(sg);
+      const mi=MIN.map(o=>`<option value="${o[0]}"${(o[0]==="no"?sg.min==="no":sg.min!=="no")?" selected":""}>${o[1]}</option>`).join("");
+      const vp=/special_aspm/.test(sg.vp.join(","))?`<span class="mono" style="font-size:12px;color:var(--warn)">special (${iso})</span>`:
+        VP.map(o=>`<label><input type="checkbox" data-vp="${o[0]}"${sg.vp.includes(o[0])?" checked":""}>${o[1]}</label>`).join("");
+      const ctry = k===0
+        ? `${NAME[iso]}<span class="n">${NUM[iso]}</span>${tag}<div><button type="button" class="segbtn addseg" data-iso="${iso}">+ period</button></div>`
+        : `<span class="segcont">↳</span>`;
+      const per = k===0 ? `<span class="hint">from start</span>`
+        : `<select data-k="from">${yearOpts(sg.from)}</select> <button type="button" class="segbtn delseg" data-iso="${iso}" data-seg="${k}" title="remove this period">×</button>`;
+      return `<tr data-iso="${iso}" data-seg="${k}"><td class="ctry">${ctry}</td><td>${per}</td><td>${govsel}</td>`+
+             `<td><select data-k="min">${mi}</select></td><td><div class="vp">${vp}</div></td></tr>`;
+    }).join("");
+  }).join("");
+}
+function render(){dims();chips();rows();}
+
+document.addEventListener("click",e=>{
+  const d=e.target.closest("#dims .dim"); if(d){st.dim=d.dataset.d;dims();return;}
+  const ch=e.target.closest(".chip[data-iso]"); if(ch){const i=ch.dataset.iso,k=st.sel.indexOf(i);
+    if(k>=0)st.sel.splice(k,1);else{st.sel.push(i);ensureModel(i);} chips();rows();return;}
+  const p=e.target.closest(".preset[data-preset]"); if(p){const v=p.dataset.preset;
+    st.sel=v==="eu"?[...EU]:v==="oecd"?[...OECD]:v==="all"?C.map(c=>c[0]):[];
+    st.sel.forEach(ensureModel); chips();rows();return;}
+  const sg=e.target.closest("#gran button"); if(sg){ st.gran=sg.dataset.g;
+    $("#gran").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b===sg));
+    present(); return; }   // sofortiger View-Wechsel aus denselben Quartalsdaten
+  const dl=e.target.closest("#view-countries .dlbtn"); if(dl){download(dl.dataset.fmt);return;}
+});
+document.addEventListener("change",e=>{
+  const tr=e.target.closest("tr[data-iso][data-seg]"); if(!tr)return;
+  const iso=tr.dataset.iso, sg=st.models[iso][+tr.dataset.seg]; if(!sg) return;
+  if(e.target.matches("select[data-k=gov]")){ sg.gov=e.target.value;
+    if((sg.gov==="minister"||sg.gov==="pmnegot") && !(sg.portf||[]).length) sg.portf=["p215","p213"]; }
+  if(e.target.matches("select[data-k=min]")) sg.min=e.target.value;
+  if(e.target.matches("select[data-k=pf0]")) sg.portf=[e.target.value,(sg.portf||[])[1]].filter(Boolean);
+  if(e.target.matches("select[data-k=pf1]")) sg.portf=[(sg.portf||[])[0]||"p215",e.target.value].filter(Boolean);
+  if(e.target.matches("select[data-k=from]")){ sg.from=+e.target.value; sortSegs(iso); }
+  if(e.target.matches("input[data-vp]")){const v=e.target.dataset.vp,i=sg.vp.indexOf(v);
+    if(e.target.checked&&i<0)sg.vp.push(v); if(!e.target.checked&&i>=0)sg.vp.splice(i,1);}
+  st.modified[iso]=true; rows();  // ab jetzt: dieses Land wird per WebR gerechnet, nicht aus den Defaults
+});
+// Zeitraum hinzufuegen/entfernen. Neues Segment erbt die Einstellungen des letzten (nur Startjahr neu).
+document.addEventListener("click",e=>{
+  const add=e.target.closest(".addseg");
+  if(add){ const iso=add.dataset.iso; ensureModel(iso); const segs=st.models[iso], lastSeg=segs[segs.length-1];
+    segs.push({...lastSeg, portf:lastSeg.portf?[...lastSeg.portf]:null, vp:[...lastSeg.vp],
+               from:Math.min(YEAR_MAX,(lastSeg.from||1980)+10)});
+    sortSegs(iso); st.modified[iso]=true; rows(); return; }
+  const del=e.target.closest(".delseg");
+  if(del){ const iso=del.dataset.iso, k=+del.dataset.seg;
+    if(k>0){ st.models[iso].splice(k,1); rows(); } return; }
+});
+
+// ===== HYBRID: precomputed defaults (instant) + WebR only for modified countries =====
+// VP_RANGE_EU direkt neben VP_RANGE (nationale vs. EU-erweiterte Fassung nebeneinander vergleichbar);
+// EU_POS/MISFIT haengen hinten an.
+const OUTQ=["iso","year","quarter","techq","eu","median1st","median2nd","pres","GOV_POS","govmin","govmax","VP_RANGE","VP_RANGE_EU","minoritygov","EU_POS","MISFIT"];
+const OUTY=["iso","year","eu","median1st","median2nd","pres","GOV_POS","govmin","govmax","VP_RANGE","VP_RANGE_EU","minoritygov","EU_POS","MISFIT"];
+const curOUT=()=> st.gran==="yearly"?OUTY:OUTQ;
+let DEF={}, defReady=false;            // DEF[dimKey] = Map(isoNum -> [row,...]) ; row in OUTQ order (13 strings)
+let webr=null, webrReady=false, webrBooting=null;
+let lastQ=[], lastRows=[], srcInfo="";  // lastQ = gemergte Quartalszeilen; lastRows = aktuelle Anzeige (Q oder Y)
+const round4=x=>Math.round(x*1e4)/1e4;
+
+// Quartalszeilen -> Jahreszeilen: pro (iso,year) Mittelwert (NA ignoriert), genau wie die Engine.
+function toYearly(qrows){
+  const g=new Map();
+  for(const r of qrows){
+    const key=r[0]+"|"+r[1];
+    if(!g.has(key)) g.set(key,{iso:r[0],year:r[1],s:{},n:{}});
+    const o=g.get(key);
+    for(const c of [4,5,6,7,8,9,10,11,12,13,14,15]){ const v=r[c];
+      if(v!==""&&v!=null&&!isNaN(+v)){ o.s[c]=(o.s[c]||0)+ +v; o.n[c]=(o.n[c]||0)+1; } }
+  }
+  const out=[];
+  for(const o of g.values()){
+    const mean=c=> o.n[c]? o.s[c]/o.n[c] : "";
+    let eu=mean(4); eu = eu===""?"":(eu>0?1:round4(eu));      // Engine: ifelse(eu>0,1,eu)
+    const row=[o.iso,o.year,eu];
+    for(const c of [5,6,7,8,9,10,11,12,13,14,15]){ const m=mean(c); row.push(m===""?"":round4(m)); }
+    out.push(row);
+  }
+  return out;
+}
+
+function eng(s,cls){const b=$("#engStatus"); b.innerHTML=(cls==="spin"?'<span class="spin"></span>':"")+s;}
+function setStatus(t){$("#status").innerHTML=t;}
+
+// EU-Position je Dimension und Quartal (aus den EU-Standardmodellen). techq ist eine globale
+// Zeitachse, deshalb passt sie ohne Umrechnung zu den Laenderquartalen.
+let EUPOS={};                              // dimKey -> Map(techq -> EU_POS)
+async function loadEUPos(){
+  const lines=(await (await fetch("data/eu_defaults.csv")).text()).trim().split("\n");
+  EUPOS={LR:new Map(),GG:new Map(),RILE:new Map()};
+  for(let i=1;i<lines.length;i++){
+    const c=lines[i].split(",").map(s=>s.replace(/^"|"$/g,""));
+    const m=EUPOS[c[0]]; if(m) m.set(c[3], c[8]);     // 3=techq, 8=EU_POS
+  }
+}
+// EU_POS + MISFIT (= EU_POS - GOV_POS) anhaengen; nur solange das Land EU-Mitglied ist (Spalte eu=p601).
+function enrichMisfit(qrows, dimKey){
+  const m=EUPOS[dimKey];
+  for(const r of qrows){
+    const ep = m ? m.get(String(r[3])) : undefined;          // 3=techq
+    const member = r[4]!==""&&r[4]!=null&&+r[4]>0;           // 4=eu (Mitgliedschaft)
+    const gp = r[8];                                          // 8=GOV_POS
+    if(member && ep!==undefined && ep!=="" && gp!==""&&gp!=null&&!isNaN(+gp)){
+      r[14]=ep; r[15]=String(round4(+ep - +gp));               // 14=EU_POS, 15=MISFIT
+    } else { r[14]=""; r[15]=""; }
+  }
+}
+
+// Defaults laden (kein WebR noetig) -> App sofort einsatzbereit
+async function loadDefaults(){
+  const [txt]=await Promise.all([ (await fetch("data/defaults.csv")).text(), loadEUPos() ]);
+  const lines=txt.trim().split("\n");
+  DEF={LR:new Map(),GG:new Map(),RILE:new Map()};
+  for(let i=1;i<lines.length;i++){
+    const c=lines[i].split(",").map(s=>s.replace(/^"|"$/g,"")); const dk=c[0]; const m=DEF[dk]; if(!m)continue;
+    const row=c.slice(1);                 // iso..minoritygov
+    if(!m.has(row[0])) m.set(row[0],[]);
+    m.get(row[0]).push(row);
+  }
+  defReady=true; $("#runBtn").disabled=false;
+  eng("ready — standard models load instantly");
+  setStatus("ready — configure and run. Standard models are instant; changing a model computes it live.");
+}
+
+// WebR erst booten, wenn wirklich ein abweichendes Modell gerechnet werden muss
+async function ensureWebR(){
+  if(webrReady) return;
+  if(webrBooting){ await webrBooting; return; }
+  webrBooting=(async()=>{
+    eng("starting R…","spin");
+    webr=new WebR(); await webr.init();
+    eng("installing dplyr… (one-time)","spin"); await webr.installPackages(["dplyr"]);
+    eng("loading engine…","spin");
+    for(const f of ["engine.R","wrapper.R"]){ const t=await (await fetch(f)).text(); await webr.evalRVoid(t); }
+    for(const [url,path] of [["data/pip_ts_aspm.rds","/pip_ts_aspm.rds"],["data/swi_referenda.rds","/swi_referenda.rds"]]){
+      const buf=new Uint8Array(await (await fetch(url)).arrayBuffer()); await webr.FS.writeFile(path,buf); }
+    await webr.evalRVoid('d <- readRDS("/pip_ts_aspm.rds"); referenda <- readRDS("/swi_referenda.rds")');
+    webrReady=true; eng("engine ready");
+  })();
+  await webrBooting;
+}
+
+// Zusatzpakete (haven fuer .dta, writexl fuer .xlsx) einmalig nachladen
+const pkgDone={};
+async function ensurePkg(p){
+  await ensureWebR();
+  if(pkgDone[p]) return;
+  eng("loading "+p+"…","spin"); await webr.installPackages([p]); pkgDone[p]=true;
+  eng("engine ready");
+}
+
+// Formel-Validierung, gemeinsam fuer Custom-Index-Reiter UND Custom-Dimension (Country/EU).
+const CUSTOM_FORMULA_RE=/^[\sper0-9+\-*/().]+$/i;
+function validCustomFormula(f){ return !!f && CUSTOM_FORMULA_RE.test(f); }
+
+// custom_wrapper.R (eval_custom_formula/aspm_query_custom/eu_run_custom) + custom_per.rds einmalig
+// laden. Braucht ensureWebR() (d) und ggf. ensureEU() (eu_data) VORHER, je nach Aufrufer.
+let customPerReady=false, customPerBooting=null;
+async function ensureCustomPer(){
+  if(customPerReady) return;
+  if(customPerBooting){ await customPerBooting; return; }
+  customPerBooting=(async()=>{
+    await ensureWebR();
+    const w=await (await fetch("custom_wrapper.R")).text(); await webr.evalRVoid(w);
+    const buf=new Uint8Array(await (await fetch("data/custom_per.rds")).arrayBuffer());
+    await webr.FS.writeFile("/custom_per.rds",buf);
+    await webr.evalRVoid('custom_per<-readRDS("/custom_per.rds")');
+    customPerReady=true;
+  })();
+  try{ await customPerBooting; }catch(e){ customPerBooting=null; throw e; }
+}
+
+// Custom-Dimension (Country): wie computeCustom(), aber mit Formel statt Standard-ideo-Spalte.
+async function computeCustomDim(isoNums, specStrings, formula){
+  await ensureCustomPer();
+  await webr.objs.globalEnv.bind("isos", isoNums);
+  await webr.objs.globalEnv.bind("specs", specStrings);
+  await webr.objs.globalEnv.bind("formula", formula);
+  const code='._r <- aspm_query_custom(isos, specs, formula); ._r <- ._r[!is.na(._r$GOV_POS),]; ._r$country <- NULL; aspm_csv(._r)';
+  const csv=await webr.evalRString(code);
+  const lines=csv.trim().split("\n");
+  return lines.slice(1).filter(l=>l.length).map(l=>l.split(",").map(s=>s.replace(/^"|"$/g,"")));
+}
+
+// Custom-Laender live rechnen -> Array von 13-String-Zeilen
+async function computeCustom(isoNums, specStrings){
+  await ensureWebR();
+  await webr.objs.globalEnv.bind("isos", isoNums);
+  await webr.objs.globalEnv.bind("specs", specStrings);
+  await webr.objs.globalEnv.bind("ideo", st.dim);
+  // EU-Positionen mitgeben (nur noetig fuer vp(...,eu), aber billig: ~250 Zahlen)
+  const em=EUPOS[DIMKEY[st.dim]]||new Map();
+  const euTq=[...em.keys()].map(Number), euVal=[...em.values()].map(Number);
+  await webr.objs.globalEnv.bind("eu_tq", euTq);
+  await webr.objs.globalEnv.bind("eu_val", euVal);
+  const code=(euTq.length? '._eu <- data.frame(techq=as.numeric(eu_tq), pos=as.numeric(eu_val)); '
+                         : '._eu <- NULL; ')+
+    '._r <- aspm_query(isos, specs, ideo, eu_pos=._eu); ._r <- ._r[!is.na(._r$GOV_POS),]; ._r$country <- NULL; aspm_csv(._r)';
+  const csv=await webr.evalRString(code);
+  const lines=csv.trim().split("\n");
+  return lines.slice(1).filter(l=>l.length).map(l=>l.split(",").map(s=>s.replace(/^"|"$/g,"")));
+}
+
+$("#runBtn").addEventListener("click",async()=>{
+  if(!defReady||!st.sel.length) return;
+  const isCustomDim=st.dim==="custom";
+  const formula=isCustomDim?$("#cFormula").value.trim():null;
+  if(isCustomDim && !validCustomFormula(formula)){
+    setStatus("formula may only use perNNN, numbers and + − * / ( )"); return; }
+  $("#runBtn").disabled=true;
+  const dk=isCustomDim?null:DIMKEY[st.dim];
+  // Bei der Custom-Dimension gibt es KEINE Standardmodelle (nichts vorberechnet) -> jedes
+  // ausgewaehlte Land laeuft live, unabhaengig vom "modified"-Status.
+  const defIsos=[], custom=[];
+  st.sel.forEach(i=>{ if(isCustomDim || st.modified[i]) custom.push(i); else defIsos.push(NUM[i]); });
+  try{
+    let rows=[];
+    // 1) Standard-Laender: sofort aus der Tabelle
+    defIsos.forEach(n=>{ const r=DEF[dk].get(String(n)); if(r) rows=rows.concat(r); });
+    // 2) Abweichende Laender: live per WebR. Ein Durchgang je Perioden-Index; aus jedem Durchgang
+    //    werden nur die Jahre dieses Segments uebernommen, danach ergibt sich eine luecklose Reihe.
+    const passes=Math.max(0,...custom.map(i=>st.models[i].length));
+    for(let k=0;k<passes;k++){
+      const isos=[], specs=[], range=new Map();
+      custom.forEach(i=>{ const segs=st.models[i]; if(k>=segs.length) return;
+        isos.push(NUM[i]); specs.push(segSpec(segs[k]));
+        range.set(String(NUM[i]), [k===0?-Infinity:segs[k].from, k+1<segs.length?segs[k+1].from-1:Infinity]);
+      });
+      if(!isos.length) continue;
+      setStatus('<span class="spin"></span>computing '+isos.length+' custom model'+(isos.length>1?'s':'')+
+        (passes>1?' — period '+(k+1)+' of '+passes:'')+'… (~15 s each, first run also loads R)');
+      const res = isCustomDim ? await computeCustomDim(isos, specs, formula) : await computeCustom(isos, specs);
+      rows=rows.concat(res.filter(r=>{ const g=range.get(String(r[0])); if(!g) return false;
+        const y=+r[1]; return y>=g[0] && y<=g[1]; }));
+    }
+    const custIsos=custom;
+    rows.sort((a,b)=> (+a[0]-+b[0]) || (+a[3]-+b[3]));   // iso, techq
+    enrichMisfit(rows, dk);   // Custom-Dimension: dk=null -> EU_POS/MISFIT bleiben leer (kein precomputed EU_POS dafuer)
+    lastQ=rows;
+    srcInfo = isCustomDim ? "custom scale · " : (custIsos.length? `${defIsos.length} standard + ${custIsos.length} custom · ` : "standard models · ");
+    present();
+    setStatus(isCustomDim ? "done — "+custIsos.length+" custom (custom scale, always live)."
+      : custIsos.length? "done — "+defIsos.length+" standard + "+custIsos.length+" custom." : "done — all from standard models (instant).");
+    $("#runBtn").disabled=false;
+  }catch(err){ setStatus("error: "+err.message); eng(webrReady?"engine ready":"ready"); $("#runBtn").disabled=false; }
+});
+
+// Anzeige aus den gemergten Quartalszeilen erzeugen (Q direkt, Y aggregiert) — ohne Neuberechnung
+function present(){
+  if(!lastQ.length) return;
+  populateYearSel("y0Sel","y1Sel", lastQ.map(r=>+r[1]), st, "y0", "y1");
+  let rows = st.gran==="yearly" ? toYearly(lastQ) : lastQ.slice();
+  rows = filterYears(rows, 1, st.y0, st.y1);
+  rows.sort((a,b)=> (+a[0]-+b[0]) || (st.gran==="yearly"?(+a[1]-+b[1]):(+a[3]-+b[3])));
+  lastRows=rows;
+  showResults(rows);
+}
+function showResults(rows){
+  st.pg.c=0; renderTable("c");
+  $("#resInfo").textContent=srcInfo+rows.length.toLocaleString("en-US")+" rows ("+st.gran+")";
+  $("#results").hidden=false; $("#results").scrollIntoView({behavior:"smooth",block:"start"});
+  countryChartUpdate(rows);
+}
+function countryChartUpdate(rows){
+  if(!rows||!rows.length){ $("#cChartCard").hidden=true; return; }
+  const isos=[...new Set(rows.map(r=>r[0]))];
+  if(!st.chartIso||!isos.includes(st.chartIso)) st.chartIso=isos[0];
+  $("#cChartSel").innerHTML=isos.map(n=>`<option value="${n}"${n===st.chartIso?" selected":""}>${ctryName(n)}</option>`).join("");
+  const OUT=curOUT(), yi=OUT.indexOf("year"), gi=OUT.indexOf("GOV_POS"), vi=OUT.indexOf("VP_RANGE"),
+        ei=OUT.indexOf("EU_POS");
+  const mine=rows.filter(r=>r[0]===st.chartIso);
+  const xs=yearFractions(mine, yi);
+  const gpts=mine.map((r,i)=>[xs[i], r[gi]===""?null:+r[gi]]);
+  const vpts=mine.map((r,i)=>[xs[i], r[vi]===""?null:+r[vi]]);
+  const epts=mine.map((r,i)=>[xs[i], r[ei]===""||r[ei]==null?null:+r[ei]]);
+  const hasEU=epts.some(p=>p[1]!=null);      // nur EU-Mitglieder haben eine EU-Linie
+  const series=[{pts:vpts, color:"var(--muted)", width:1.6, opacity:.55, dash:"4 3", label:"VP_RANGE"}];
+  if(hasEU) series.push({pts:epts, color:"#2E5EAA", width:1.8, dash:"6 3", label:"EU_POS"});
+  series.push({pts:gpts, color:"var(--accent)", width:2.4, label:"GOV_POS"});
+  $("#cChart").innerHTML=lineChartSVG(series);
+  $("#cChartLegend").innerHTML='<span><i style="background:var(--accent)"></i>GOV_POS</span>'+
+    (hasEU?'<span><i style="background:#2E5EAA"></i>EU_POS (gap = misfit)</span>':'')+
+    '<span><i style="background:var(--muted);opacity:.6"></i>VP_RANGE</span>';
+  const last=gpts[gpts.length-1], lastV=vpts[vpts.length-1];
+  const dLabel=st.dim==="custom"?"custom":(DIMS.find(d=>d[0]===st.dim)||[,"scale"])[1];
+  $("#cChartTitle").textContent=ctryName(st.chartIso);
+  $("#cChartT").textContent="Government position on the "+dLabel+" scale";
+  $("#cChartV").textContent=last&&last[1]!=null? "latest GOV_POS "+last[1].toFixed(2)+(lastV&&lastV[1]!=null?" · VP_RANGE "+lastV[1].toFixed(2):"") : "—";
+  const yrs=mine.map(r=>+r[yi]);
+  $("#cChartSpan").textContent=Math.min(...yrs)+"–"+Math.max(...yrs);
+  $("#cChartCard").hidden=false;
+}
+document.addEventListener("change",e=>{
+  if(e.target.id==="cChartSel"){ st.chartIso=e.target.value; countryChartUpdate(lastRows); }
+  if(e.target.id==="y0Sel"){ st.y0=Math.min(+e.target.value, st.y1); present(); }
+  if(e.target.id==="y1Sel"){ st.y1=Math.max(+e.target.value, st.y0); present(); }
+});
+function rowsToCSV(rows){
+  const head=curOUT().join(",");
+  const body=rows.map(r=>r.map(v=>/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v).join(",")).join("\n");
+  return head+"\n"+body+"\n";
+}
+// Geteilter Export: CSV-String -> Datei (csv direkt; rds/dta/xlsx echt via R)
+async function saveAs(csv, name, fmt, statusEl){
+  let blob;
+  if(fmt==="csv"){
+    blob=new Blob([csv],{type:"text/csv"});
+  } else {
+    const saved=statusEl.innerHTML;
+    try{
+      statusEl.innerHTML='<span class="spin"></span>preparing .'+fmt+' file…';
+      if(fmt==="dta") await ensurePkg("haven");
+      else if(fmt==="xlsx") await ensurePkg("writexl");
+      else await ensureWebR();
+      await webr.FS.writeFile("/dl.csv", new TextEncoder().encode(csv));
+      await webr.evalRVoid('._dl <- utils::read.csv("/dl.csv", check.names=FALSE)');
+      const path="/out."+fmt;
+      if(fmt==="rds")      await webr.evalRVoid('saveRDS(._dl, "'+path+'")');
+      else if(fmt==="dta") await webr.evalRVoid('haven::write_dta(._dl, "'+path+'")');
+      else                 await webr.evalRVoid('writexl::write_xlsx(._dl, "'+path+'")');
+      blob=new Blob([await webr.FS.readFile(path)],{type:"application/octet-stream"});
+      statusEl.innerHTML=saved;
+    }catch(e){ statusEl.innerHTML="could not build ."+fmt+" ("+e.message+") — use .csv"; return; }
+  }
+  const d=new Date(), p=n=>String(n).padStart(2,"0");
+  const ts=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
+  const stamped=name.replace(/(\.[^.]+)$/, "_"+ts+"$1");   // pip_LR_yearly.csv -> pip_LR_yearly_2026-07-25_1930.csv
+  const u=URL.createObjectURL(blob),a=document.createElement("a"); a.href=u; a.download=stamped; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),1000);
+}
+function download(fmt){ if(!lastRows.length) return;
+  saveAs(rowsToCSV(lastRows), "pip_"+(DIMKEY[st.dim]||"custom")+"_"+st.gran+"."+fmt, fmt, $("#status")); }
+
+// ===== PARTEIEN-Reiter: Positionen direkt aus data/parties.csv (lazy), ODER eigene Formel (live) =====
+// Man waehlt EINE Dimension und bekommt deren komplette Index-Familie. Vorher standen LR/GG/RILE
+// gemischt nebeneinander mit einem mehrdeutigen "COH" - jetzt ist jede Spalte eindeutig zugeordnet.
+const P_META =["iso","year","quarter","techq","party","name"];   // Quartalsansicht
+const P_METAY=["iso","year","party","name"];                      // Jahresansicht (quarter/techq entfallen)
+const P_VALS={
+  LR:  ["LR","LR_IMP","LR_CORE","LR_CORE_IMP","LR_PLUS","LR_PLUS_IMP","LR_COH"],
+  GG:  ["GG","GG_IMP","GG_CORE","GG_CORE_IMP","GG_PLUS","GG_PLUS_IMP","GG_COH"],
+  RILE:["RILE"],
+  custom:["INDEX"],
+};
+const P_DIMS=[["LR","Left–Right"],["GG","Green–Growth"],["RILE","RILE"],["custom","Custom"]];
+const pVals=()=> P_VALS[st.pDim]||P_VALS.LR;
+const pOUT =()=> (st.pgran==="yearly"?P_METAY:P_META).concat(pVals());
+let PARTIES=null, PCOL=null, pLoading=null, pLastQ=[], pLastRows=[], pSrc="";
+st.pSel=["GER"]; st.pgran="quarterly"; st.pDim="LR";
+
+function pDimsRender(){
+  $("#pDims").innerHTML=P_DIMS.map(([k,lab])=>
+    dimTile("data-pd",k,lab,k==="custom"?"your formula":k,st.pDim===k,k)).join("");
+  $("#pFormulaBox").hidden = st.pDim!=="custom";
+  $("#pCountriesHint").textContent = st.pDim==="custom"
+    ? "party positions on your formula" : "party positions are read directly from the data — no model needed";
+}
+
+async function loadParties(){
+  if(PARTIES) return;
+  if(pLoading){ await pLoading; return; }
+  pLoading=(async()=>{
+    $("#pStatus").innerHTML='<span class="spin"></span>loading party data…';
+    const txt=await (await fetch("data/parties.csv")).text();
+    const rows=parseCSV(txt.trim());              // iso,year,quarter,techq,party,name + 15 Wertspalten
+    PCOL={}; rows[0].forEach((h,i)=>PCOL[h]=i);   // Spaltenname -> Index (Reihenfolge kommt aus Skript 24)
+    PARTIES=new Map();                            // iso(num) -> [rowArray,...] (volle Zeilen)
+    for(let i=1;i<rows.length;i++){ const r=rows[i]; if(!r[0])continue;
+      if(!PARTIES.has(r[0])) PARTIES.set(r[0],[]); PARTIES.get(r[0]).push(r); }
+    $("#pRunBtn").disabled=false; $("#pStatus").textContent="ready — pick countries and show.";
+  })();
+  await pLoading;
+}
+function pChips(){ $("#pChips").innerHTML=C.map(c=>`<button class="chip" data-piso="${c[0]}" aria-pressed="${st.pSel.includes(c[0])}" title="${c[1]} · ${c[2]}">${c[0]}</button>`).join("");
+  $("#pCount").textContent=st.pSel.length+" selected"; }
+// Mittel je (iso,party,year) ueber ALLE Wertspalten ab Index 6 - funktioniert dadurch fuer jede
+// Dimension gleichermassen (7 LR-Spalten, 7 GG-Spalten, 1 RILE-Spalte oder 1 INDEX-Spalte).
+function toYearlyP(qrows){
+  if(!qrows.length) return [];
+  const ncol=qrows[0].length, g=new Map();
+  for(const r of qrows){ const key=r[0]+"|"+r[4]+"|"+r[1];
+    if(!g.has(key)) g.set(key,{iso:r[0],year:r[1],party:r[4],name:r[5],s:{},n:{}});
+    const o=g.get(key);
+    for(let c=6;c<ncol;c++){ const v=r[c]; if(v!==""&&v!=null&&!isNaN(+v)){ o.s[c]=(o.s[c]||0)+ +v; o.n[c]=(o.n[c]||0)+1; } } }
+  const out=[];
+  for(const o of g.values()){ const row=[o.iso,o.year,o.party,o.name];
+    for(let c=6;c<ncol;c++) row.push(o.n[c]? round4(o.s[c]/o.n[c]) : "");
+    out.push(row); }
+  return out;
+}
+function presentP(){
+  if(!pLastQ.length) return;
+  populateYearSel("py0Sel","py1Sel", pLastQ.map(r=>+r[1]), st, "py0", "py1");
+  let rows = st.pgran==="yearly" ? toYearlyP(pLastQ) : pLastQ.slice();
+  rows = filterYears(rows, 1, st.py0, st.py1);
+  rows.sort((a,b)=> (+a[0]-+b[0]) || (+a[st.pgran==="yearly"?2:4]-+b[st.pgran==="yearly"?2:4]) || (+ (st.pgran==="yearly"?a[1]:a[3]) - + (st.pgran==="yearly"?b[1]:b[3])));
+  pLastRows=rows; showP(rows);
+}
+// Spaltenerklaerung je Dimension. X steht fuer LR bzw. GG.
+function pNote(){
+  const d=st.pDim;
+  if(d==="custom") return '<strong>INDEX</strong> = your formula evaluated per party and quarter '+
+    '(flow-interpolated manifesto data). Yearly shows the per-party annual mean.';
+  if(d==="RILE") return '<strong>RILE</strong> = the classic Manifesto-Project right–left index, offered '+
+    'as an extra alongside the two main scales. Yearly shows the per-party annual mean.';
+  const full = d==="LR" ? "Left–Right" : "Green–Growth";
+  return `All ${d} indices (Jahn): <strong>${d}</strong> position · <strong>${d}_IMP</strong> importance `+
+    `(how much weight the party gives this dimension) · <strong>${d}_CORE</strong> / <strong>${d}_CORE_IMP</strong> `+
+    `and <strong>${d}_PLUS</strong> / <strong>${d}_PLUS_IMP</strong> the narrower and wider variants · `+
+    `<strong>${d}_COH</strong> cohesion (Jahn/Oberst) — all on the ${full} scale, quarterly interpolated. `+
+    `Yearly shows the per-party annual mean.`;
+}
+function showP(rows){
+  st.pg.p=0; renderTable("p");
+  $("#pResInfo").textContent=pSrc+rows.length.toLocaleString("en-US")+" rows ("+st.pgran+")";
+  $("#pResNote").innerHTML = pNote();
+  $("#pResults").hidden=false; $("#pResults").scrollIntoView({behavior:"smooth",block:"start"});
+  partyChartUpdate(rows);
+}
+st.pChartIso=null; st.pChartScale="LR";
+function partyChartUpdate(rows){
+  if(!rows||!rows.length){ $("#pChartCard").hidden=true; return; }
+  const vals=pVals();
+  if(!vals.includes(st.pChartScale)) st.pChartScale=vals[0];   // nach Dimensionswechsel zuruecksetzen
+  $("#pChartScaleWrap").hidden = vals.length<2;                // nur eine Serie -> keine Auswahl noetig
+  $("#pChartScale").innerHTML=vals.map(v=>`<option value="${v}"${v===st.pChartScale?" selected":""}>${v}</option>`).join("");
+  const isos=[...new Set(rows.map(r=>r[0]))];
+  if(!st.pChartIso||!isos.includes(st.pChartIso)) st.pChartIso=isos[0];
+  $("#pChartSel").innerHTML=isos.map(n=>`<option value="${n}"${n===st.pChartIso?" selected":""}>${ctryName(n)}</option>`).join("");
+  const OUT=pOUT(), yi=OUT.indexOf("year"), pi=OUT.indexOf("party"), ni=OUT.indexOf("name"),
+        si=OUT.indexOf(st.pChartScale);
+  const mine=rows.filter(r=>r[0]===st.pChartIso);
+  // Auswahl der max. 10 Linien: zuletzt aktive Parteien zuerst (nicht Parteicode aufsteigend!),
+  // sonst faellt eine aktuell wichtige, aber hoch-codierte Partei (z.B. AfD) staendig aus dem
+  // Chart raus zugunsten laengst verschwundener Splitterparteien mit niedrigem Code.
+  const grouped=new Map();
+  mine.forEach(r=>{
+    const code=r[pi], nm=r[ni]||code, yv=+r[yi];
+    if(!grouped.has(code)) grouped.set(code,{name:nm,lastYear:yv,count:0});
+    const g=grouped.get(code); g.count++; if(yv>g.lastYear) g.lastYear=yv;
+  });
+  const parties=[...grouped.entries()]
+    .sort((a,b)=> (b[1].lastYear-a[1].lastYear) || (b[1].count-a[1].count))
+    .slice(0,10)
+    .map(([code,g])=>[code,g.name]);
+  const colorMap=assignPartyColors(parties);
+  const series=parties.map(([code,nm])=>{
+    const prows=mine.filter(r=>r[pi]===code), xs=yearFractions(prows, yi);
+    return {pts: prows.map((r,i)=>[xs[i], r[si]===""?null:+r[si]]), color: colorMap[code], width:2.1, label:nm};
+  });
+  $("#pChart").innerHTML=lineChartSVG(series);
+  $("#pChartLegend").innerHTML=parties.map(([code,nm])=>`<span><i style="background:${colorMap[code]}"></i>${nm}</span>`).join("");
+  $("#pChartTitle").textContent=ctryName(st.pChartIso);
+  $("#pChartT").textContent="Party "+st.pChartScale+" over time"+(parties.length>=10?" (10 most recently active parties)":"");
+  const yrs=mine.map(r=>+r[yi]);
+  $("#pChartSpan").textContent=Math.min(...yrs)+"–"+Math.max(...yrs);
+  $("#pChartCard").hidden=false;
+}
+document.addEventListener("change",e=>{
+  if(e.target.id==="pChartSel"){ st.pChartIso=e.target.value; partyChartUpdate(pLastRows); }
+  if(e.target.id==="pChartScale"){ st.pChartScale=e.target.value; partyChartUpdate(pLastRows); }
+  if(e.target.id==="py0Sel"){ st.py0=Math.min(+e.target.value, st.py1); presentP(); }
+  if(e.target.id==="py1Sel"){ st.py1=Math.max(+e.target.value, st.py0); presentP(); }
+  if(e.target.id==="euy0Sel"){ st.euy0=Math.min(+e.target.value, st.euy1); presentEU(); }
+  if(e.target.id==="euy1Sel"){ st.euy1=Math.max(+e.target.value, st.euy0); presentEU(); }
+});
+function pRowsToCSV(rows){ const head=pOUT().join(",");
+  const body=rows.map(r=>r.map(v=>/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v).join(",")).join("\n");
+  return head+"\n"+body+"\n"; }
+
+$("#pRunBtn").addEventListener("click", async()=>{
+  if(!st.pSel.length) return;
+  if(st.pDim==="custom"){
+    const formula=$("#pFormula").value.trim();
+    if(!validCustomFormula(formula)){ $("#pStatus").textContent="formula may only use perNNN, numbers and + − * / ( )"; return; }
+    $("#pRunBtn").disabled=true;
+    try{
+      $("#pStatus").innerHTML='<span class="spin"></span>computing your index… (first run loads R ~30 s, then ~10 s)';
+      await ensureCI();
+      await webr.objs.globalEnv.bind("ci_formula", formula);
+      await webr.objs.globalEnv.bind("ci_isos", st.pSel.map(i=>NUM[i]));
+      const csv=await webr.evalRString('ci_run(ci_formula, ci_isos)');
+      pLastQ = csv.trim().split("\n").slice(1).filter(l=>l.length).map(l=>l.split(",").map(s=>s.replace(/^"|"$/g,"")));
+      pSrc = st.pSel.length+" countries · ";
+      presentP();
+      $("#pStatus").textContent="done — "+st.pSel.length+" countries, "+new Set(pLastQ.map(r=>r[4])).size+" parties.";
+    }catch(err){ $("#pStatus").textContent="error: "+err.message; }
+    $("#pRunBtn").disabled=false;
+    return;
+  }
+  if(!PARTIES) return;
+  let rows=[]; st.pSel.forEach(i=>{ const r=PARTIES.get(String(NUM[i])); if(r) rows=rows.concat(r); });
+  // Volle CSV-Zeilen auf die Spalten der gewaehlten Dimension eindampfen (Meta + deren Indexfamilie),
+  // damit Tabelle/Chart/Jahresmittel generisch mit "alles ab Index 6 ist ein Wert" arbeiten koennen.
+  const idx=[...P_META, ...pVals()].map(c=>PCOL[c]);
+  pLastQ = rows.map(r=>idx.map(j=>r[j]));
+  pSrc=st.pSel.length+" countries · ";
+  presentP();
+  $("#pStatus").textContent="done — "+st.pSel.length+" countries, "+new Set(rows.map(r=>r[4])).size+" parties.";
+});
+
+// ===== EU-Reiter: Default instant (eu_defaults.csv); Custom-Institutionsmodelle via WebR (estimate_eu) =====
+const OUTEU =["year","quarter","techq","EUCOU_POS","COMM_POS","COUNCIL_POS","EP_POS","EU_POS"];
+const OUTEUY=["year","EUCOU_POS","COMM_POS","COUNCIL_POS","EP_POS","EU_POS"];
+const euOUT=()=> st.euGran==="yearly"?OUTEUY:OUTEU;
+let EUDATA=null, euLoading=null, euLastQ=[], euLastRows=[], euSrc="";
+let euWebrReady=false, euWebrBooting=null;
+st.euDim=""; st.euGran="quarterly";
+
+async function loadEU(){
+  if(EUDATA) return;
+  if(euLoading){ await euLoading; return; }
+  euLoading=(async()=>{
+    $("#euStatus").innerHTML='<span class="spin"></span>loading EU data…';
+    const rows=parseCSV((await (await fetch("data/eu_defaults.csv")).text()).trim());
+    EUDATA=new Map();
+    for(let i=1;i<rows.length;i++){ const r=rows[i]; if(!r[0])continue;
+      if(!EUDATA.has(r[0])) EUDATA.set(r[0],[]); EUDATA.get(r[0]).push(r.slice(1)); }  // ohne dim-Spalte
+    $("#euRunBtn").disabled=false; $("#euStatus").textContent="ready — pick models and show.";
+  })();
+  await euLoading;
+}
+function euDimsRender(){
+  $("#euDims").innerHTML=DIMS.map(d=>dimTile("data-ed",d[2],d[1],d[2],st.euDim===d[2],d[2])).join("")+
+    dimTile("data-ed","custom","Custom","your formula",st.euDim==="custom","custom");
+  $("#euFormulaBox").hidden = st.euDim!=="custom";
+}
+function euModels(){ return {council:$("#euCouncil").value, commission:$("#euCommission").value,
+  councilmin:$("#euCouncilmin").value, euparl:$("#euParl").value, principal:$("#euPrincipal").checked}; }
+function euIsCustom(m){ return m.council!=="default"||m.commission!=="default"||m.councilmin!=="default"||m.euparl!=="default"||!m.principal; }
+function toYearlyEU(qrows){                          // Mittel je Jahr ueber die 5 Positionen
+  const g=new Map();
+  for(const r of qrows){ const y=r[0];
+    if(!g.has(y)) g.set(y,{year:y,s:{},n:{}});
+    const o=g.get(y);
+    for(const c of [3,4,5,6,7]){ const v=r[c]; if(v!==""&&v!=null&&!isNaN(+v)){ o.s[c]=(o.s[c]||0)+ +v; o.n[c]=(o.n[c]||0)+1; } } }
+  return [...g.values()].map(o=>{ const m=c=> o.n[c]? round4(o.s[c]/o.n[c]) : "";
+    return [o.year, m(3),m(4),m(5),m(6),m(7)]; });
+}
+function presentEU(){
+  populateYearSel("euy0Sel","euy1Sel", euLastQ.map(r=>+r[0]), st, "euy0", "euy1");
+  let rows = st.euGran==="yearly" ? toYearlyEU(euLastQ) : euLastQ.slice();
+  rows = filterYears(rows, 0, st.euy0, st.euy1);
+  euLastRows=rows;
+  st.pg.eu=0; renderTable("eu");
+  $("#euResInfo").textContent=euSrc+rows.length.toLocaleString("en-US")+" rows ("+st.euGran+")";
+  $("#euResults").hidden=false;
+  euChartUpdate(rows);
+}
+const EU_SERIES=[["EUCOU_POS","European Council","#2E5EAA"],["COMM_POS","Commission","#C0453F"],
+  ["COUNCIL_POS","Council of Ministers","#D9A400"],["EP_POS","Parliament","#3E8E5A"],["EU_POS","EU (overall)","#0F8A96"]];
+// EU_POS bewusst FEST kodiert statt var(--accent): der EU-Reiter faerbt --accent blau ein, was mit
+// dem blauen Europaeischen Rat kollidieren wuerde. Diagrammfarben bleiben so unabhaengig vom Reiter.
+function euChartUpdate(rows){
+  if(!rows||!rows.length){ $("#euChartCard").hidden=true; return; }
+  const OUT=euOUT(), yi=OUT.indexOf("year"), xs=yearFractions(rows, yi);
+  const series=EU_SERIES.map(([col,label,color])=>({
+    pts: rows.map((r,i)=>[xs[i], r[OUT.indexOf(col)]===""?null:+r[OUT.indexOf(col)]]),
+    color, width: col==="EU_POS"?2.8:1.5, opacity: col==="EU_POS"?1:.6, label}));
+  $("#euChart").innerHTML=lineChartSVG(series);
+  $("#euChartLegend").innerHTML=EU_SERIES.map(([col,label,color])=>`<span><i style="background:${color}"></i>${label}</span>`).join("");
+  const dLabel=(DIMS.find(d=>d[0]===st.dim)||[,"scale"])[1];
+  const last=rows[rows.length-1], euI=OUT.indexOf("EU_POS");
+  $("#euChartT").textContent="EU institutions on the "+dLabel+" scale";
+  $("#euChartV").textContent=last[euI]!==""? "latest EU_POS "+(+last[euI]).toFixed(2) : "—";
+  const yrs=rows.map(r=>+r[yi]);
+  $("#euChartSpan").textContent=Math.min(...yrs)+"–"+Math.max(...yrs);
+  $("#euChartCard").hidden=false;
+}
+async function ensureEU(){
+  if(euWebrReady) return;
+  if(euWebrBooting){ await euWebrBooting; return; }
+  euWebrBooting=(async()=>{
+    await ensureWebR();                                   // dplyr + engine.R (lib_aspm)
+    for(const f of ["engine_eu.R","eu_wrapper.R"]){ const t=await (await fetch(f)).text(); await webr.evalRVoid(t); }
+    for(const [url,path] of [["data/eu_data.rds","/eu_data.rds"],["data/external.rds","/external.rds"],["data/govpos_eu.rds","/govpos_eu.rds"]]){
+      const buf=new Uint8Array(await (await fetch(url)).arrayBuffer()); await webr.FS.writeFile(path,buf); }
+    await webr.evalRVoid('eu_data<-readRDS("/eu_data.rds"); external_eu<-readRDS("/external.rds"); govpos_eu<-readRDS("/govpos_eu.rds")');
+    euWebrReady=true;
+  })();
+  try{ await euWebrBooting; }catch(e){ euWebrBooting=null; throw e; }  // Fehlversuch nicht zwischenspeichern
+}
+async function euRun(){
+  if(!EUDATA){ return; }
+  if(!st.euDim) st.euDim=DIMS[0][2];
+  const isCustomDim = st.euDim==="custom";
+  const formula = isCustomDim ? $("#euFormula").value.trim() : null;
+  if(isCustomDim && !validCustomFormula(formula)){
+    $("#euStatus").textContent="formula may only use perNNN, numbers and + − * / ( )"; return; }
+  const dimCol = isCustomDim ? null : (DIMS.find(d=>d[2]===st.euDim)?.[0] || DIMS[0][0]);
+  const m = euModels();
+  $("#euRunBtn").disabled=true;
+  try{
+    if(isCustomDim){
+      $("#euStatus").innerHTML='<span class="spin"></span>computing custom EU model on your scale… (re-estimates all 36 countries first — <strong style="color:var(--crit)">expect around 10 minutes</strong>, more on the first run while R loads)';
+      await ensureEU(); await ensureCustomPer();
+      await webr.objs.globalEnv.bind("isos_all", C.map(c=>c[2]));
+      await webr.objs.globalEnv.bind("specs_all", C.map(c=>c[3]));
+      await webr.objs.globalEnv.bind("formula", formula);
+      const call=`eu_run_custom(formula, isos_all, specs_all, "${m.council}","${m.commission}","${m.councilmin}","${m.euparl}","${m.principal?1:0}")`;
+      const csv=await webr.evalRString(call);
+      euLastQ = csv.trim().split("\n").slice(1).filter(l=>l.length).map(l=>l.split(",").map(s=>s.replace(/^"|"$/g,"")));
+      euSrc = "custom scale · ";
+      $("#euStatus").textContent="done — custom EU model (custom scale, always live).";
+    } else if(!euIsCustom(m)){
+      euLastQ = (EUDATA.get(st.euDim)||[]).slice(); euSrc = st.euDim+" · default · ";
+      $("#euStatus").textContent="done — default institutional models (instant).";
+    } else {
+      $("#euStatus").innerHTML='<span class="spin"></span>computing custom EU models… (first run loads R ~30 s, then ~15 s)';
+      await ensureEU();
+      const call=`eu_run("${dimCol}","${m.council}","${m.commission}","${m.councilmin}","${m.euparl}","${m.principal?1:0}")`;
+      const csv=await webr.evalRString(call);
+      euLastQ = csv.trim().split("\n").slice(1).filter(l=>l.length).map(l=>l.split(",").map(s=>s.replace(/^"|"$/g,"")));
+      euSrc = st.euDim+" · custom · ";
+      $("#euStatus").textContent="done — custom EU models.";
+    }
+    presentEU();
+  }catch(err){ $("#euStatus").textContent="error: "+err.message; }
+  $("#euRunBtn").disabled=false;
+}
+function euRowsToCSV(rows){ const head=euOUT().join(",");
+  const body=rows.map(r=>r.map(v=>/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v).join(",")).join("\n");
+  return head+"\n"+body+"\n"; }
+
+// ===== Custom-Formel-Infrastruktur (WebR): wird vom Party-Reiter (Custom-Kachel) genutzt =====
+let ciReady=false, ciBooting=null;
+async function ensureCI(){
+  if(ciReady) return;
+  if(ciBooting){ await ciBooting; return; }
+  ciBooting=(async()=>{
+    await ensureWebR();                                  // dplyr + WebR
+    const w=await (await fetch("custom_wrapper.R")).text(); await webr.evalRVoid(w);
+    const buf=new Uint8Array(await (await fetch("data/custom_index.rds")).arrayBuffer());
+    await webr.FS.writeFile("/custom_index.rds",buf);
+    await webr.evalRVoid('custom_index<-readRDS("/custom_index.rds")');
+    ciReady=true;
+  })();
+  try{ await ciBooting; }catch(e){ ciBooting=null; throw e; }
+}
+// Wiederverwendbar fuer alle 3 Formel-Boxen (Party-Custom #pCodeList, Country-Custom #cCodeList, EU-Custom #euCodeList).
+async function showCodeList(listId){
+  const list=$("#"+listId);
+  if(list.dataset.loaded){ list.hidden=!list.hidden; return; }
+  const rows=parseCSV((await (await fetch("data/per_labels.csv")).text()).trim());   // code,label
+  list.innerHTML=rows.slice(1).filter(r=>r[0]).map(r=>
+    `<button type="button" class="codechip" data-code="${r[0]}" title="click to insert"><b>${r[0]}</b>${r[1]||""}</button>`).join("");
+  list.hidden=false; list.dataset.loaded="1";
+}
+
+// ===== Tab-Umschaltung =====
+function switchView(v){
+  st.view=v;
+  $("#tabs").querySelectorAll("button").forEach(b=>b.setAttribute("aria-selected", b.dataset.v===v));
+  $("#view-countries").hidden = v!=="countries";
+  $("#view-parties").hidden   = v!=="parties";
+  $("#view-eu").hidden        = v!=="eu";
+  if(v==="parties"){ pDimsRender(); pChips(); loadParties(); }
+  if(v==="eu"){ if(!st.euDim) st.euDim=DIMS[0][2]; euDimsRender(); loadEU().then(euRun); }
+}
+
+// zentrale Klick-Route fuer Parteien-Ansicht (ergaenzt den Haupt-Listener)
+document.addEventListener("click",e=>{
+  const tb=e.target.closest("#tabs button"); if(tb && !tb.disabled){ switchView(tb.dataset.v); return; }
+  const pc=e.target.closest(".chip[data-piso]"); if(pc){ const i=pc.dataset.piso,k=st.pSel.indexOf(i);
+    if(k>=0)st.pSel.splice(k,1);else st.pSel.push(i); pChips(); return; }
+  const pp=e.target.closest(".preset[data-ppreset]"); if(pp){ const v=pp.dataset.ppreset;
+    st.pSel=v==="eu"?[...EU]:v==="oecd"?[...OECD]:[]; pChips(); return; }
+  const psg=e.target.closest("#pGran button"); if(psg){ st.pgran=psg.dataset.g;
+    $("#pGran").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b===psg)); presentP(); return; }
+  const pdl=e.target.closest("#view-parties .dlbtn"); if(pdl && pLastRows.length){
+    saveAs(pRowsToCSV(pLastRows), "pip_parties_"+st.pDim+"_"+st.pgran+"."+pdl.dataset.pfmt, pdl.dataset.pfmt, $("#pStatus")); return; }
+  const ed=e.target.closest("#euDims .dim"); if(ed){ st.euDim=ed.dataset.ed; euDimsRender();
+    if(st.euDim!=="custom") euRun();    // Custom braucht erst eine Formel -> nicht sofort (teuer) mitlaufen
+    return; }
+  const erb=e.target.closest("#euRunBtn"); if(erb){ euRun(); return; }
+  const esg=e.target.closest("#euGran button"); if(esg){ st.euGran=esg.dataset.g;
+    $("#euGran").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b===esg)); presentEU(); return; }
+  const edl=e.target.closest("#view-eu .dlbtn"); if(edl && euLastRows.length){
+    saveAs(euRowsToCSV(euLastRows), "pip_eu_"+st.euDim+"_"+st.euGran+"."+edl.dataset.efmt, edl.dataset.efmt, $("#euStatus")); return; }
+  const ccco=e.target.closest("#cCodes"); if(ccco){ e.preventDefault(); showCodeList("cCodeList"); return; }
+  const euco=e.target.closest("#euCodes"); if(euco){ e.preventDefault(); showCodeList("euCodeList"); return; }
+  const cch=e.target.closest(".codechip"); if(cch){
+    const list=cch.closest("[data-target]"), f=$("#"+list.dataset.target), code=cch.dataset.code;
+    const a=f.selectionStart??f.value.length, b=f.selectionEnd??a;
+    f.value=f.value.slice(0,a)+code+f.value.slice(b); f.focus(); f.selectionStart=f.selectionEnd=a+code.length; return; }
+  const pco=e.target.closest("#pCodes"); if(pco){ e.preventDefault(); showCodeList("pCodeList"); return; }
+  const pd=e.target.closest("#pDims .dim"); if(pd){ st.pDim=pd.dataset.pd; pDimsRender(); return; }
+});
+
+// Jahresfilter (Years) sofort mit einem plausiblen Vollbereich befuellen, NICHT erst nach dem ersten
+// Lauf — sonst sind die Dropdowns leer und laesst sich vor dem ersten "Run" nichts einschraenken.
+// Der erste echte Lauf klammert diese Werte danach an den tatsaechlichen Datenbereich (populateYearSel
+// ueberschreibt eine bereits gesetzte Wahl nicht, sondern klammert sie nur in den gueltigen Bereich).
+const FULL_RANGE=[YEAR_MIN,YEAR_MAX];
+populateYearSel("y0Sel","y1Sel", FULL_RANGE, st, "y0", "y1");
+populateYearSel("py0Sel","py1Sel", FULL_RANGE, st, "py0", "py1");
+populateYearSel("euy0Sel","euy1Sel", FULL_RANGE, st, "euy0", "euy1");
+
+loadConfig().then(loadDefaults);
+</script>
+</body>
+</html>

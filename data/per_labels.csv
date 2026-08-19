@@ -1,0 +1,111 @@
+code,label
+per101,foreign special +
+per102,foreign special -
+per103,anti-imperalism
+per104,military +
+per105,military -
+per106,peace
+per107,internationalism +
+per108,europe +
+per109,internationalism -
+per110,europe -
+per201,freedom & human rights
+per202,democracy
+per203,constitution +
+per204,constitution -
+per301,decentralisation
+per302,centralisation
+per303,gov-admin efficiency
+per304,political corruption
+per305,political authority
+per401,free market economy
+per402,incentives
+per403,market regulation
+per404,economic planning
+per405,corporatism/mixed economy
+per406,protectionism +
+per407,protectionism -
+per408,economic goals
+per409,keynesian demand management
+per410,economic growth +
+per411,technology & infrastructure
+per412,controlled economy
+per413,nationalisation
+per414,economic orthodoxy
+per415,marxist analysis +
+per416,anti-growth economy +
+per501,environmentalism +
+per502,culture +
+per503,equality +
+per504,welfare +
+per505,welfare -
+per506,education +
+per507,education -
+per601,national way of life +
+per602,national way of life -
+per603,traditional morality +
+per604,traditional morality -
+per605,law and order +
+per606,civic mindedness +
+per607,multiculturalism +
+per608,multiculturalism -
+per701,labour groups +
+per702,labour groups -
+per703,agriculture +
+per704,middle class and prof. groups
+per705,minority groups
+per706,non-economic demographic groups
+per1011,sub1: russia +
+per1012,sub1: western states +
+per1013,sub1: eastern europe +
+per1014,sub1: baltic states +
+per1015,sub1: nordic council +
+per1016,sub1: yugoslavia +
+per1021,sub1: russia -
+per1022,sub1: western states -
+per1023,sub1: eastern europe -
+per1024,sub1: baltic states -
+per1025,sub1: nordic council -
+per1026,sub1: yugoslavia -
+per1031,sub1: russian army -
+per1032,sub1: independence +
+per1033,sub1: rights of nations +
+per2021,sub1: transition to democracy
+per2022,sub1: restrict citizenship +
+per2023,sub1: lax citizenship +
+per2031,sub1: presidential regime +
+per2032,sub1: republic +
+per2033,sub1: checks and balances +
+per2041,sub1: monarchy +
+per3011,sub1: republican powers +
+per3051,sub1: public situation -
+per3052,sub1: communist +
+per3053,sub1: communist -
+per3054,sub1: rehabilitation +
+per3055,sub1: coalitions +
+per4011,sub1: privatization +
+per4012,sub1: control economy -
+per4013,sub1: restitution +
+per4014,sub1: private vouchers +
+per4121,sub1: social ownership +
+per4122,sub1: mixed economy +
+per4123,sub1: publicly owned industry +
+per4124,sub1: socialist property +
+per4131,sub1: property restitution -
+per4132,sub1: privatization -
+per5021,sub1: priv-pub mix culture +
+per5031,sub1: priv-pub mix social justice +
+per5041,sub1: priv-pub mix welfare +
+per5061,sub1: priv-pub mix education +
+per6011,sub1: karabakh issue +
+per6012,sub1: rebuilding USSR +
+per6013,sub1: national security +
+per6014,sub1: cyprus issue
+per6061,sub1: general crisis
+per6071,sub1: cultural autonomy +
+per6072,sub1: multiculturalism roma +
+per6081,sub1: multiculturalism roma -
+per7051,sub1: minorities inland +
+per7052,sub1: minorities abroad -
+per7061,sub1: war participants +
+per7062,sub1: refugees +
