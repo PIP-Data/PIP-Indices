@@ -8,19 +8,28 @@
      Auf einem Host MIT Headern (crossOriginIsolated=true) ist das ein No-op. -->
 <script src="coi-serviceworker.js"></script>
 <style>
-  :root{--ground:#F1F4F6;--surface:#fff;--surface-2:#F7F9FA;--ink:#17232E;--muted:#5A6A78;--line:#DFE6EB;
-    --accent:#0E6E78;--accent-ink:#0A555D;--accent-soft:#E3F0F1;--good:#2F8A57;--warn:#B7791F;--crit:#C0453F;
+  /* Flaechen sind bewusst nicht reinweiss, sondern minimal ins Petrol getoent (Grundfarbe der App). */
+  :root{--ground:#EDF2F4;--surface:#FAFCFD;--surface-2:#F3F8F9;--ink:#17232E;--muted:#5A6A78;--line:#DCE5E9;
+    --accent:#06727F;--accent-ink:#045A66;--accent-soft:#D5EAED;--good:#2F8A57;--warn:#B7791F;--crit:#C0453F;
     --mono:ui-monospace,"Cascadia Code",Consolas,monospace;--r:12px;--r-sm:8px;
     --shadow:0 1px 2px rgba(23,35,46,.06),0 6px 20px rgba(23,35,46,.06)}
   @media(prefers-color-scheme:dark){:root{--ground:#0E1620;--surface:#16202C;--surface-2:#1B2733;--ink:#E6EDF3;
-    --muted:#93A3B2;--line:#26343F;--accent:#37A7B0;--accent-ink:#84D4DA;--accent-soft:#123036}}
+    --muted:#93A3B2;--line:#26343F;--accent:#2FB6C2;--accent-ink:#7FE0E9;--accent-soft:#0F343A}}
   *{box-sizing:border-box}[hidden]{display:none!important}
   body{margin:0;background:var(--ground);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
   .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
   h1,h2{margin:0} .mono{font-family:var(--mono)}
   header{border-bottom:1px solid var(--line);background:var(--surface)}
-  .top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 0}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;padding:15px 0;flex-wrap:wrap}
   .mark{font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:23px} .mark b{color:var(--accent)}
+  /* Zitationsangabe im Kopf: die Seite ist eine zitierfaehige Datenquelle -> Version + Stand sichtbar. */
+  .topright{display:flex;flex-direction:column;align-items:flex-end;gap:5px;margin-left:auto}
+  .cite{font-size:11.5px;line-height:1.35;color:var(--muted);text-align:right}
+  .cite b{color:var(--ink);font-weight:650} .cite em{font-style:italic}
+  @media(max-width:640px){
+    .top{flex-direction:column;align-items:flex-start;gap:8px}
+    .topright{align-items:flex-start;margin-left:0} .cite{text-align:left}
+  }
   .badge{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);background:var(--accent-soft);
     border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);padding:4px 9px;border-radius:100px;font-weight:600}
   .lede{padding:20px 0 8px;max-width:70ch} .lede h1{font-family:Georgia,serif;font-size:clamp(22px,3vw,30px);line-height:1.15}
@@ -34,13 +43,13 @@
   .tabs button .tsub{display:block;font-size:11.5px;color:var(--muted);margin-top:3px;font-weight:400}
   .tabs button:hover:not(:disabled):not([aria-selected="true"]){border-color:var(--t-accent)}
   .tabs button:disabled{opacity:.45;cursor:default}
-  .tabs button[data-v="countries"]{--t-accent:#0E6E78;--t-soft:#E3F0F1}
-  .tabs button[data-v="parties"]  {--t-accent:#6B4E8A;--t-soft:#EEE9F4}
-  .tabs button[data-v="eu"]       {--t-accent:#2B5797;--t-soft:#E7EDF8}
+  .tabs button[data-v="countries"]{--t-accent:#06727F;--t-soft:#D5EAED}
+  .tabs button[data-v="parties"]  {--t-accent:#6A3D99;--t-soft:#E8DCF5}
+  .tabs button[data-v="eu"]       {--t-accent:#1F4FA3;--t-soft:#DAE5F8}
   @media(prefers-color-scheme:dark){
-    .tabs button[data-v="countries"]{--t-accent:#37A7B0;--t-soft:#123036}
-    .tabs button[data-v="parties"]  {--t-accent:#A88BC8;--t-soft:#241C33}
-    .tabs button[data-v="eu"]       {--t-accent:#6E9AD8;--t-soft:#16233A}
+    .tabs button[data-v="countries"]{--t-accent:#2FB6C2;--t-soft:#0F343A}
+    .tabs button[data-v="parties"]  {--t-accent:#B18FDC;--t-soft:#281E3B}
+    .tabs button[data-v="eu"]       {--t-accent:#6BA1EE;--t-soft:#142642}
   }
   .tabs button[aria-selected="true"]{border-color:var(--t-accent);background:var(--t-soft);
     box-shadow:0 0 0 3px color-mix(in srgb, var(--t-accent) 16%, transparent)}
@@ -60,21 +69,21 @@
   /* Farbverlauf unter jeder Dimensions-Kachel: zeigt die Pole der Skala auf einen Blick. */
   .dim .spectrum{height:6px;border-radius:100px;margin-top:10px;min-width:148px}
   .dim .poles{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:4px}
-  .sp-LR{background:linear-gradient(90deg,#C0453F,#c9c3b6 48%,#2E5EAA)}
-  .sp-GG{background:linear-gradient(90deg,#3E8E5A,#cfc7b4 50%,#9A7B3F)}
+  .sp-LR{background:linear-gradient(90deg,#C63A33,#c9c3b6 48%,#2455B3)}
+  .sp-GG{background:linear-gradient(90deg,#2F8F55,#cfc7b4 50%,#9E7530)}
   .sp-RILE{background:linear-gradient(90deg,#B3908E,#d6d1ca 50%,#8797B7)}   /* gedaempft: nachrangige Skala */
   .sp-custom{background:linear-gradient(90deg,#1F2933,#9AA5B1)}
   .dim-minor .nm{font-weight:600;color:var(--muted)}                        /* RILE als Zusatzangebot */
 
   /* Bereichsfarben: jeder Reiter faerbt seine Bedienelemente ueber --accent ein, damit sofort
      erkennbar ist, wo man sich befindet. Diagrammfarben bleiben davon unberuehrt (fest kodiert). */
-  #view-countries{--accent:#0E6E78;--accent-ink:#0A555D;--accent-soft:#E3F0F1}
-  #view-parties  {--accent:#6B4E8A;--accent-ink:#553E70;--accent-soft:#EEE9F4}
-  #view-eu       {--accent:#2B5797;--accent-ink:#23477C;--accent-soft:#E7EDF8}
+  #view-countries{--accent:#06727F;--accent-ink:#045A66;--accent-soft:#D5EAED}
+  #view-parties  {--accent:#6A3D99;--accent-ink:#52307A;--accent-soft:#E8DCF5}
+  #view-eu       {--accent:#1F4FA3;--accent-ink:#173E85;--accent-soft:#DAE5F8}
   @media(prefers-color-scheme:dark){
-    #view-countries{--accent:#37A7B0;--accent-ink:#84D4DA;--accent-soft:#123036}
-    #view-parties  {--accent:#A88BC8;--accent-ink:#CDBAE4;--accent-soft:#241C33}
-    #view-eu       {--accent:#6E9AD8;--accent-ink:#A8C4EC;--accent-soft:#16233A}
+    #view-countries{--accent:#2FB6C2;--accent-ink:#7FE0E9;--accent-soft:#0F343A}
+    #view-parties  {--accent:#B18FDC;--accent-ink:#D3BDF0;--accent-soft:#281E3B}
+    #view-eu       {--accent:#6BA1EE;--accent-ink:#A5C6F5;--accent-soft:#142642}
   }
 
   .tools{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
@@ -123,6 +132,21 @@
   .guide .gbody code{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
   .guide .gbody dl{margin:4px 0;display:grid;grid-template-columns:auto 1fr;gap:2px 12px}
   .guide .gbody dt{font-weight:650}.guide .gbody dd{margin:0;color:var(--muted)}
+  /* Quellennachweis-Kasten (MARPOR-Auflage bzw. PIP-Eigenzitation) - bewusst abgesetzt vom Fliesstext. */
+  .srcbox{margin:8px 0 4px;padding:10px 13px;background:var(--surface-2);border:1px solid var(--line);
+    border-left:3px solid var(--accent);border-radius:var(--r-sm);font-size:12.5px;line-height:1.5;color:var(--ink)}
+  .srcbox a{color:var(--accent-ink)}
+  .fineprint{font-size:12px;color:var(--muted);margin-top:6px!important}
+  /* Hervorgehobener Kasten: der nicht-wissenschaftliche Nutzen soll zwischen den akademischen
+     Absaetzen NICHT untergehen (ausdruecklicher Nutzerwunsch) -> eigene Flaeche + Label. */
+  .usebox{margin:16px 0 4px;padding:13px 15px;background:var(--accent-soft);
+    border:1px solid color-mix(in srgb,var(--accent) 38%,transparent);border-radius:var(--r-sm)}
+  .usebox .ub-lab{display:inline-block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    font-weight:700;color:var(--accent-ink);margin-bottom:6px}
+  .gbody .usebox p{margin:0;color:var(--ink)}
+  .reflist{margin:6px 0 2px;padding-left:18px}
+  .reflist li{margin-bottom:7px;color:var(--muted)}
+  .reflist a{color:var(--accent-ink)}
   footer{border-top:1px solid var(--line);color:var(--muted);font-size:12px;padding:18px 0 34px}
   footer a{color:var(--accent-ink)}
   .chartcard{margin-top:14px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
@@ -160,7 +184,11 @@
 <body>
 <header><div class="wrap"><div class="top">
   <div class="mark">PIP<b> — </b>Indices &amp; Models</div>
-  <span class="badge" id="engStatus"><span class="spin"></span>starting R…</span>
+  <div class="topright">
+    <span class="badge" id="engStatus"><span class="spin"></span>starting R…</span>
+    <div class="cite"><b>Detlef Jahn (2026)</b>: <em>PIP — Indices &amp; Models</em>. Version 1.0, September 2026.<br>
+      Please cite when using data from this site.</div>
+  </div>
 </div></div></header>
 
 <div class="wrap">
@@ -168,6 +196,63 @@
     <h1>Estimate political actor positions — and take the data with you.</h1>
     <p>Pick a scale, choose countries and how each government &amp; veto-player range is modelled, then run it in your browser. No install, no server — the computation runs locally via WebR.</p>
   </div>
+
+  <details class="guide">
+    <summary>What it is</summary>
+    <div class="gbody">
+      <p>This site publishes the <b>PIP — Parties, Institutions &amp; Preferences</b> data collection. Its core is
+        <b>institutional data collected by the project itself</b>, hand-coded from national sources and maintained
+        as a quarterly time series. Ideological
+        preferences are added from the Manifesto Project (MARPOR) data (see source note below).</p>
+
+      <h4>What the project collects itself</h4>
+      <dl>
+        <dt>Governments</dt><dd>Cabinet composition quarter by quarter — governing parties, seat shares, individual
+          ministerial portfolios, majority or minority status.</dd>
+        <dt>Veto players</dt><dd>The institutional actors able to block policy change: parliamentary chambers,
+          presidents, and — for member states — the EU, each with its own ideological position and range.</dd>
+        <dt>Party characteristics</dt><dd>Party histories (mergers, splits and renamings tracked under stable party
+          codes), <b>ideological cohesion</b>, and <b>ideological importance</b> — how much weight a party actually
+          gives a dimension — on both the Left–Right and the Green–Growth scale. The Manifesto Project's own
+          <b>RILE</b> index is carried alongside them for comparison.</dd>
+        <dt>EU institutions</dt><dd>Positions of the European Council, the Commission, the Council of Ministers and
+          the European Parliament, plus an overall EU position weighted by the decision rules of each treaty period.</dd>
+        <dt>Ideological misfit</dt><dd>The distance between a member state's government and the EU position on the
+          same scale in the same quarter — how far a national government sits from the EU it is bound by.</dd>
+      </dl>
+
+      <h4>Analytically derived, not assembled ad hoc</h4>
+      <p>Every institutional variable here follows from explicit analytical and theoretical reasoning about what the
+        concept is meant to capture — how a government position should be aggregated, what makes an actor a veto
+        player, how salience and cohesion are defined. In most cases that derivation has been set out and reviewed in
+        a <b>peer-reviewed journal article</b> (listed under <i>Documentation &amp; publications</i>). This is what
+        makes the measures offered here <b>analytically defined indices for macro-comparative research</b> rather
+        than ad-hoc codings: they mean the same thing across 36 countries and across seven decades, which is the
+        precondition for comparing them at all.</p>
+
+      <div class="usebox">
+        <span class="ub-lab">Also for journalists and practitioners</span>
+        <p>You do not need to be doing macro-quantitative research to get something out of this. The same data
+          answers plain factual questions about institutions and party programmes: <b>who governed</b> a country in
+          any given quarter and with which parties, <b>which party held which ministry</b>, whether a cabinet had a
+          majority, <b>how a party's programme moved</b> over the decades, and how far a national government stood
+          from the EU. Everything is quarterly, covers 1945 to the present, and downloads as a plain spreadsheet —
+          no account, no licence, no statistical software required.</p>
+      </div>
+
+      <h4>Ideological preferences: source</h4>
+      <p>The Left–Right and Green–Growth indices are derived from the coded election-manifesto data of the Manifesto
+        Project; RILE is that project's own index. Please cite the underlying data alongside this site:</p>
+      <div class="srcbox">
+        Lehmann, Pola / Burst, Tobias / Matthieß, Theres / Regel, Sven / Volkens, Andrea / Weßels, Bernhard /
+        Zehnter, Lisa (2022): <em>The Manifesto Data Collection. Manifesto Project (MRG/CMP/MARPOR).
+        Version 2022a.</em> Berlin: Wissenschaftszentrum Berlin für Sozialforschung (WZB).
+        <a href="https://doi.org/10.25522/manifesto.mpds.2022a" target="_blank" rel="noopener">doi.org/10.25522/manifesto.mpds.2022a</a>
+      </div>
+      <p class="fineprint">Only aggregated indices are published here, not the underlying manifesto codings —
+        redistribution in this form is covered by written permission from the Manifesto Project.</p>
+    </div>
+  </details>
 
   <details class="guide">
     <summary>How to use this tool</summary>
@@ -215,6 +300,57 @@
       <h4>Getting the data out</h4>
       <p>Toggle <b>Quarterly / Yearly</b>, then download any table as <b>CSV</b>, <b>Excel</b>, <b>Stata</b> or <b>R</b>.
          The first “custom” calculation loads the R engine once (~30 s); after that it is quick.</p>
+    </div>
+  </details>
+
+  <details class="guide">
+    <summary>Documentation &amp; publications</summary>
+    <div class="gbody">
+      <h4>Documentation</h4>
+      <ul class="reflist">
+        <li><a href="docs/Codebook_PIP_v2022-03.pdf" target="_blank" rel="noopener">Codebook PIP v2022-03</a> (PDF) —
+          variable-by-variable documentation of the full data collection.</li>
+        <li>Jahn, Detlef: <em>Parties, Institutions, Preferences (PIP): A Database for Analytical
+          Macro-Comparative Research.</em> Manuscript, forthcoming. — the design of the database and the analytical
+          reasoning behind its institutional variables.</li>
+      </ul>
+
+      <h4>The model and the indices</h4>
+      <ul class="reflist">
+        <li>Jahn, Detlef (2016): <em>The Politics of Environmental Performance. Institutions and Preferences in
+          Industrialized Democracies.</em> Cambridge: Cambridge University Press. — the Agenda Setting Power Model
+          underlying the country estimates.</li>
+        <li>Jahn, Detlef (2011): Conceptualizing Left and Right in comparative politics: Towards a deductive approach.
+          <em>Party Politics</em> 17(6): 745–765.
+          <a href="https://doi.org/10.1177/1354068810380091" target="_blank" rel="noopener">doi:10.1177/1354068810380091</a>
+          — the deductive Left–Right index.</li>
+        <li>Jahn, Detlef (2010): The Veto Player Approach in Macro-Comparative Politics: Concepts and Measurement.
+          In: König, Thomas / Tsebelis, George / Debus, Marc (eds.), <em>Reform Processes and Policy Change. Veto
+          Players and Decision-Making in Modern Democracies.</em> New York: Springer, 43–68. — the veto-player
+          measurement.</li>
+        <li>Jahn, Detlef / Oberst, Christoph (2012): Ideological Party Cohesion in Macro-comparative Politics: The
+          Nordic Social Democratic Parties from a Comparative Perspective. <em>Scandinavian Political Studies</em>
+          35(3): 222–245.
+          <a href="https://doi.org/10.1111/j.1467-9477.2012.00287.x" target="_blank" rel="noopener">doi:10.1111/j.1467-9477.2012.00287.x</a>
+          — the cohesion index (LR_COH / GG_COH).</li>
+        <li>Jahn, Detlef / Düpont, Nils (2015): <em>Estimating the Position of the European Union. A Tool for
+          Macro-Quantitative Studies.</em> KFG Working Paper Series 65. Berlin: Kolleg-Forschergruppe “The
+          Transformative Power of Europe”, Freie Universität Berlin. — the EU institution estimates.</li>
+        <li>Jahn, Detlef (2022): The changing relevance and meaning of left and right in 34 party systems from 1945
+          to 2020. <em>Comparative European Politics</em> 20(3): 308–332.
+          <a href="https://doi.org/10.1057/s41295-022-00305-5" target="_blank" rel="noopener">doi:10.1057/s41295-022-00305-5</a></li>
+        <li>Jahn, Detlef / Düpont, Nils / Rachuj, Martin (2017): <em>Left-Right Party Ideology in 36 OECD Countries.</em>
+          Greifswald Comparative Politics Working Paper Series 10. University of Greifswald.</li>
+        <li>Jahn, Detlef: <em>What the Rules Cannot Show: Cabinet Governance in 34 Parliamentary Democracies,
+          2005–2021.</em> Manuscript. — the centre-of-gravity approach to cabinet governance.</li>
+      </ul>
+
+      <h4>Citing the data collection</h4>
+      <div class="srcbox">
+        Jahn, Detlef / Düpont, Nils, together with Behm, Thomas / Oberst, Christoph / Rachuj, Martin:
+        <em>PIP — Parties, Institutions &amp; Preferences: PIP Collection [Version 2022-03].</em>
+        Chair of Comparative Politics, University of Greifswald.
+      </div>
     </div>
   </details>
 
@@ -475,9 +611,10 @@
     </section>
    </div><!-- /view-eu -->
   </main>
+  <!-- Bewusst nur die Zitation: Publikationen/Methodennachweise stehen in der Klappe
+       "Documentation & publications", damit sie nicht doppelt gefuehrt werden. -->
   <footer>
-    <strong>PIP — Indices &amp; Models</strong> · runs entirely in your browser via WebR · part of “PIP – Parties, Institutions &amp; Preferences”, University of Greifswald.<br>
-    Method: Jahn (2016), <em>The Politics of Environmental Performance</em>, Cambridge University Press · EU estimates: Jahn &amp; Düpont (2015), “Estimating the Position of the European Union”. Please cite these when using the data.
+    Please cite as: <strong>Detlef Jahn (2026)</strong>: <em>PIP — Indices &amp; Models</em>. Version 1.0, September 2026.
   </footer>
 </div>
 
