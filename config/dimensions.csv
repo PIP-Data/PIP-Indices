@@ -1,4 +1,4 @@
-key,label,column
-LR,Left–Right,ja10f
-GG,Green–Growth,ja20f
-RILE,RILE,bu01f
+key,label,column,default_portf
+LR,Left–Right,ja10f,"p208,p207,p214"
+GG,Green–Growth,ja20f,"p215,p213"
+RILE,RILE,bu01f,"p208,p207,p214"
