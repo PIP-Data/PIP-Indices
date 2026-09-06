@@ -3,7 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PIP — Indices &amp; Models</title>
+<!-- Nur Browser-Tab und Suchergebnis; die Wortmarke auf der Seite bleibt kurz ("PIP — Indices & Models").
+     Die Zusatzwoerter sind noetig, weil "PIP" allein mit dem Python-Paketmanager u.a. konkurriert. -->
+<title>PIP Indices — Parties, Institutions &amp; Preferences</title>
+<!-- Inhaberschaftsnachweis fuer Google Search Console. Muss auf der Startseite bleiben,
+     sonst gilt die Bestaetigung als widerrufen. -->
+<meta name="google-site-verification" content="S1OlPfQwZUBMg8pNV23AR-UDFhEgJqy0eajO5xLtK-0">
+<meta name="description" content="Interactive PIP Indices database for comparative politics: indicators on political parties, governments, institutions and political preferences from the Parties, Institutions and Preferences (PIP) project by Detlef Jahn. For researchers, journalists and students of comparative politics.">
+<link rel="canonical" href="https://pip-data.github.io/PIP-Indices/">
 <!-- Ruestet COOP/COEP nach, falls der Host keine eigenen Header setzt (z.B. GitHub Pages).
      Auf einem Host MIT Headern (crossOriginIsolated=true) ist das ein No-op. -->
 <script src="coi-serviceworker.js"></script>
@@ -194,7 +201,12 @@
 <div class="wrap">
   <div class="lede">
     <h1>Estimate political actor positions — and take the data with you.</h1>
-    <p>Pick a scale, choose countries and how each government &amp; veto-player range is modelled, then run it in your browser. No install, no server — the computation runs locally via WebR.</p>
+    <p><b>PIP Indices</b> is an interactive database for comparative political research, built on the
+      <b>PIP — Parties, Institutions &amp; Preferences</b> project. It provides indicators on political parties,
+      governments, institutions and political preferences for 36 countries and the European Union from 1945 to the
+      present, for researchers, political scientists, journalists and other users interested in comparative
+      politics.</p>
+    <p>Pick a scale and model, choose your countries and time span, then run it in your browser. No install, no server — the computation runs locally via WebR.</p>
   </div>
 
   <details class="guide">
@@ -233,11 +245,13 @@
       <div class="usebox">
         <span class="ub-lab">Also for journalists and practitioners</span>
         <p>You do not need to be doing macro-quantitative research to get something out of this. The same data
-          answers plain factual questions about institutions and party programmes: <b>who governed</b> a country in
-          any given quarter and with which parties, <b>which party held which ministry</b>, whether a cabinet had a
-          majority, <b>how a party's programme moved</b> over the decades, and how far a national government stood
-          from the EU. Everything is quarterly, covers 1945 to the present, and downloads as a plain spreadsheet —
-          no account, no licence, no statistical software required.</p>
+          answers plain factual questions about institutions and party programmes: <b>who governed a country and
+          how</b> in any given quarter and with which parties, <b>whether a cabinet had a majority</b> and
+          <b>which constraints it is facing</b> (veto players), <b>how a party's programme moved</b> over the
+          decades, and how far a national government stood from the EU. For the EU itself there are data on the
+          European Council, the Commission, the Council of Ministers and the European Parliament. Everything is
+          quarterly, covers 1945 to the present, and downloads as a plain spreadsheet — no account, no licence, no
+          statistical software required.</p>
       </div>
 
       <h4>Ideological preferences: source</h4>
@@ -258,7 +272,7 @@
     <summary>How to use this tool</summary>
     <div class="gbody">
       <p>This tool estimates where political actors — governments, veto players, and EU institutions — sit on
-         ideological scales, following the Agenda Setting Power Model (Jahn 2016). All data comes from the
+         ideological scales, following the Agenda Setting Power Model (Jahn 2018). All data comes from the
          <b>PIP – Parties, Institutions &amp; Preferences</b> dataset and every calculation runs in your browser.</p>
 
       <h4>Ideological scales</h4>
@@ -280,6 +294,31 @@
         <dt>EU institutions</dt><dd>Positions of the European Council, Commission, Council of Ministers, Parliament,
           and the overall EU, modelled per treaty period. You may swap the institutional models.</dd>
       </dl>
+
+      <h4>Choosing your own model — what this adds over a plain download</h4>
+      <p>Every result starts from a <b>standard model</b>: the operationalization used in the PIP publications,
+        chosen on the basis of the relevant theories and, for the government models, on an empirical analysis
+        (Jahn 2018). These defaults are precomputed, so the published measures appear instantly without your having
+        to touch a single setting.</p>
+      <p>But an operationalization is a theoretical decision, not a fact. Others may prefer a different one, and a
+        specific research question may call for a different emphasis. Every such decision is therefore exposed as a
+        control you can change — the result is then recomputed live, for that country alone:</p>
+      <dl>
+        <dt>Government</dt><dd>How the government's position is aggregated: weighted by <b>seats</b>, by
+          <b>cabinet members</b> or by <b>portfolios</b>, as an <b>unweighted mean</b>, or as the position of the
+          <b>Prime Minister</b>, of a <b>specific minister</b> (any of 18 portfolios), of the <b>PM negotiating with
+          that minister</b>, or under <b>unanimity</b>.</dd>
+        <dt>Minority cabinets</dt><dd>Whether a minority government is treated like any other cabinet, or as a
+          minimal connected winning coalition together with its support parties.</dd>
+        <dt>Veto players</dt><dd>Which actors count as a constraint — government, first chamber, second chamber,
+          president — each switched on or off to match your own definition of a veto player. The EU can be added on
+          top as a further veto player (<b>VP_RANGE_EU</b>).</dd>
+        <dt>EU institutions</dt><dd>The decision rule applied to each body per treaty period: qualified majority
+          (fixed or rotating presidency), mean, median, unanimity, bargaining, or power weights.</dd>
+        <dt>The scale itself</dt><dd>LR, GG, RILE — or one you define yourself under <b>Custom</b> (see below).</dd>
+      </dl>
+      <p>This is what separates the tool from a static data download: you are not tied to one author's
+        operationalization, and you can see straight away how much a finding depends on it.</p>
 
       <h4>Custom scale</h4>
       <p>Every tab has a fourth scale option, <b>Custom</b>, alongside LR/GG/RILE: build your own from
@@ -317,7 +356,7 @@
 
       <h4>The model and the indices</h4>
       <ul class="reflist">
-        <li>Jahn, Detlef (2016): <em>The Politics of Environmental Performance. Institutions and Preferences in
+        <li>Jahn, Detlef (2018): <em>The Politics of Environmental Performance. Institutions and Preferences in
           Industrialized Democracies.</em> Cambridge: Cambridge University Press. — the Agenda Setting Power Model
           underlying the country estimates.</li>
         <li>Jahn, Detlef (2011): Conceptualizing Left and Right in comparative politics: Towards a deductive approach.
@@ -344,13 +383,6 @@
         <li>Jahn, Detlef: <em>What the Rules Cannot Show: Cabinet Governance in 34 Parliamentary Democracies,
           2005–2021.</em> Manuscript. — the centre-of-gravity approach to cabinet governance.</li>
       </ul>
-
-      <h4>Citing the data collection</h4>
-      <div class="srcbox">
-        Jahn, Detlef / Düpont, Nils, together with Behm, Thomas / Oberst, Christoph / Rachuj, Martin:
-        <em>PIP — Parties, Institutions &amp; Preferences: PIP Collection [Version 2022-03].</em>
-        Chair of Comparative Politics, University of Greifswald.
-      </div>
     </div>
   </details>
 
@@ -474,6 +506,7 @@
         <div class="tools">
           <button class="preset" data-ppreset="eu">EU members</button>
           <button class="preset" data-ppreset="oecd">OECD-21</button>
+          <button class="preset" data-ppreset="all">All</button>
           <button class="preset" data-ppreset="clear">Clear</button>
           <span class="count" id="pCount">0 selected</span>
         </div>
@@ -1625,7 +1658,7 @@ document.addEventListener("click",e=>{
   const pc=e.target.closest(".chip[data-piso]"); if(pc){ const i=pc.dataset.piso,k=st.pSel.indexOf(i);
     if(k>=0)st.pSel.splice(k,1);else st.pSel.push(i); pChips(); return; }
   const pp=e.target.closest(".preset[data-ppreset]"); if(pp){ const v=pp.dataset.ppreset;
-    st.pSel=v==="eu"?[...EU]:v==="oecd"?[...OECD]:[]; pChips(); return; }
+    st.pSel=v==="eu"?[...EU]:v==="oecd"?[...OECD]:v==="all"?C.map(c=>c[0]):[]; pChips(); return; }
   const psg=e.target.closest("#pGran button"); if(psg){ st.pgran=psg.dataset.g;
     $("#pGran").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b===psg)); presentP(); return; }
   const pdl=e.target.closest("#view-parties .dlbtn"); if(pdl && pLastRows.length){

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://pip-data.github.io/PIP-Indices/sitemap.xml
