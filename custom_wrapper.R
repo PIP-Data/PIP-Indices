@@ -48,12 +48,14 @@ aspm_query_custom <- function(isos, specs, formula, gran="quarterly", eu_pos=NUL
 # da EU-Institutionen die GOV_POS jedes (Ex-)Mitgliedslands brauchen. Erwartet eu_wrapper.R (eu_run)
 # und ensureEU()-Daten (eu_data/external_eu/govpos_eu) bereits geladen.
 eu_run_custom <- function(formula, all_isos, all_specs, council="default", commission="default",
-                          councilofmin="default", euparl="default", principal="1"){
+                          councilofmin="default", euparl="default", principal="1", portf=NULL,
+                          portf_isos=""){
   ensure_custom_per_joined()
   d$._custom <<- eval_custom_formula(d, formula)
   eu_data$._custom <<- eval_custom_formula(eu_data, formula)
   sp <- as.list(as.character(all_specs)); names(sp) <- as.character(all_isos)
   gp <- estimate_aspm(d, sp, ideo="._custom", referenda=get0("referenda"), verbose=FALSE)$quarterly
   gp <- gp[, c("iso","techq","GOV_POS")]
-  eu_run("._custom", council, commission, councilofmin, euparl, principal, gp_override=gp)
+  eu_run("._custom", council, commission, councilofmin, euparl, principal, gp_override=gp,
+         portf=portf, portf_isos=portf_isos)
 }

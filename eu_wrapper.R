@@ -2,13 +2,25 @@
 # ideo_col: "ja10f"/"ja20f"/"bu01f" (oder "._custom", s. eu_run_custom); Modelle "default" =
 # historische Per-Perioden-Wahl, sonst ein Modell fuer alle Perioden. principal: "1"/"0".
 # gp_override: optionales GOV_POS-data.frame(iso,techq,GOV_POS) statt govpos_eu-Lookup (fuer Custom-Dim).
+# portf: Politikfeld als Komma-Liste nationaler Ressortcodes ("p208,p207,p214"), Vorrangfolge 1./2./3.
+# Wahl. Steuert BEIDE Institutionen: Ministerrat direkt, Kommission ueber das Pendant (+430).
+# portf_isos: Komma-Liste von Laendercodes, fuer die die Ministerposition ueberhaupt gilt
+# ("" = alle Laender). Die App schickt hier die Laender mit gov(pm|minister|pmnegot).
+# portf=NULL -> Vorgabe aus EU_DEFAULT; portf="" -> AUSDRUECKLICH kein Ressort (reine
+# Regierungsposition bzw. Kommissions-Mittel). Die App schickt immer eine Zeichenkette.
 eu_run <- function(ideo_col, council="default", commission="default", councilofmin="default",
-                   euparl="default", principal="1", gp_override=NULL){
+                   euparl="default", principal="1", gp_override=NULL, portf=NULL, portf_isos=""){
   spec <- list(principal = principal %in% c("1","TRUE","true",TRUE))
   if(council      != "default") spec$council      <- rep(council,5)
   if(commission   != "default") spec$commission   <- rep(commission,5)
   if(councilofmin != "default") spec$councilofmin <- rep(councilofmin,5)
   if(euparl       != "default") spec$euparl       <- rep(euparl,5)
+  if(!is.null(portf)){
+    pf <- trimws(strsplit(as.character(portf), ",")[[1]]); pf <- pf[nzchar(pf)]
+    spec$coun_portf <- pf; spec$comm_portf <- eu_comm_portf(pf)
+  }
+  pi <- trimws(strsplit(as.character(portf_isos), ",")[[1]]); pi <- pi[nzchar(pi)]
+  spec$coun_portf_isos <- if(length(pi)) as.numeric(pi) else NULL
   gp <- if(!is.null(gp_override)) gp_override else govpos_eu[govpos_eu$dim==ideo_col, c("iso","techq","GOV_POS")]
   out <- estimate_eu(eu_data, ideo_col, gp, external=external_eu, spec=spec)
   qmap <- unique(eu_data[!is.na(eu_data$g105), c("g105","g103","g104")])

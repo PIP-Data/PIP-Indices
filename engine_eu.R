@@ -105,24 +105,36 @@ eu_council <- function(eu, ideo, models=rep("power",5), pmweight=c("population",
 }
 
 # --- Europaeische Kommission: Kommissar-Parteien (p625>=1). Modell "bargaining": Verhandlung zwischen
-#     Praesident (p631>0) und Portfolio-Kommissar(en) (p645/p643), dann MCWC gewichtet mit p625. ---
-eu_commission <- function(eu, ideo, portf=c("p645","p643"), models=rep("bargaining",5)){
+#     Praesident (p631>0) und Portfolio-Kommissar(en), dann MCWC gewichtet mit p625.
+#     portf = Ressort-Kaskade (Kommissar-Variablen p631-p648), beliebig viele Stufen, in Vorrangfolge;
+#     greift keine Stufe, faellt es auf comm_mean zurueck (wie est_eu_commission.do). ---
+eu_commission <- function(eu, ideo, portf=c("p638","p637","p644"), models=rep("bargaining",5)){
   eu$.ideo <- eu[[ideo]]
   isc <- !is.na(eu$p601)&eu$p601==1 & !is.na(eu$p625)&eu$p625>=1
   eu$filterpos <- ifelse(isc & !is.na(eu$.ideo), eu$.ideo, ifelse(isc & is.na(eu$.ideo), eu$GOV_POS, NA_real_))
   eu$filter1   <- ifelse(isc & !is.na(eu$filterpos), eu$p625, NA_real_)
   cc <- eu[!is.na(eu$filter1), ]
-  cc$.pf1 <- cc[[portf[1]]]; cc$.pf2 <- cc[[portf[2]]]; cc$.p631 <- cc$p631
+  cc$.p631 <- cc$p631
+  portf <- portf[!is.na(portf) & nzchar(portf)]
+  portf <- portf[portf %in% names(cc)]
   agg <- cc |> group_by(g105) |> summarise(
     comm_mean   = sum(filterpos*filter1,na.rm=TRUE)/sum(filter1,na.rm=TRUE),
     comm_median = wmedian(filterpos, filter1),
     .cmn=min(filterpos,na.rm=TRUE), .cmx=max(filterpos,na.rm=TRUE),
     comm_pres  = { v<-filterpos[!is.na(.p631)&.p631>0]; if(length(v)&&any(!is.na(v))) mean(v,na.rm=TRUE) else NA_real_ },
-    .portf1    = { v<-filterpos[!is.na(.pf1)&.pf1>0]; if(length(v)&&any(!is.na(v))) mean(v,na.rm=TRUE) else NA_real_ },
-    .portf2    = { v<-filterpos[!is.na(.pf2)&.pf2>0]; if(length(v)&&any(!is.na(v))) mean(v,na.rm=TRUE) else NA_real_ },
     .groups="drop")
   agg$comm_unanimity <- agg$.cmn + (agg$.cmx-agg$.cmn)/2
-  agg$comm_portf <- dplyr::coalesce(agg$.portf1, agg$.portf2, agg$comm_mean)
+  # Ressort-Kaskade: je Stufe das Mittel der Positionen der Kommissare mit diesem Ressort
+  for(i in seq_along(portf)){
+    cc$.pf <- cc[[portf[i]]]
+    p <- cc |> filter(!is.na(.pf) & .pf>0) |> group_by(g105) |>
+         summarise(.v=mean(filterpos,na.rm=TRUE), .groups="drop")
+    names(p)[2] <- paste0(".portf",i)
+    agg <- agg |> left_join(p, by="g105")
+  }
+  agg$comm_portf <- agg$comm_mean
+  for(i in rev(seq_along(portf))){ k <- paste0(".portf",i)
+    agg$comm_portf <- ifelse(!is.na(agg[[k]]), agg[[k]], agg$comm_portf) }
   agg$comm_presportf <- (agg$comm_pres + agg$comm_portf)/2
   # MCWC ab comm_presportf, gewichtet mit filter1 (p625); Schwelle = halbe Kommissarszahl
   cc <- cc |> left_join(agg |> select(g105, comm_presportf), by="g105")
@@ -142,17 +154,40 @@ eu_commission <- function(eu, ideo, portf=c("p645","p643"), models=rep("bargaini
   agg |> select(g105, COMM_POS)
 }
 
-# --- Ministerrat: je Quartal ueber Mitgliedsregierungen (GOV_POS). Stimmen p611, QMV-Schwelle p612,
-#     Praesidentschaft p614, Trio p615. MCWC von der Praesidentschaft aus (qmv1_uw / qmv2_uw). ---
-eu_councilofmin <- function(eu, models=c("unanimity","qmv1_uw","qmv1_uw","qmv1_uw","qmv2_uw"),
-                            rotprespower="3:1:1"){
-  cm <- eu[!is.na(eu$p601) & eu$p601==1, ]
-  cm <- cm |> group_by(g101,g105) |> summarise(
+# --- Ministerrat: je Quartal ueber Mitgliedsregierungen. Stimmen p611, QMV-Schwelle p612,
+#     Praesidentschaft p614, Trio p615. MCWC von der Praesidentschaft aus (qmv1_uw / qmv2_uw).
+#     portf = Ressort-Kaskade (nationale Ministervariablen p201-p218): statt der Regierungsposition
+#     zaehlt die Position des Ministers, den das Land in die Ratsformation entsendet; greift keine
+#     Stufe, bleibt es bei GOV_POS (wie "06a/06b eu_positions_*.do"). portf=NULL -> reine GOV_POS.
+#     portf_isos = Laendercodes (g101), fuer die die Ministerposition ueberhaupt gilt; NULL = alle.
+#     Hintergrund: in kollegialen Regierungssystemen vertritt der entsandte Minister die Kabinettslinie,
+#     nicht die eigene Parteiposition - dort bleibt GOV_POS richtig (s. eu_minister_isos()). ---
+eu_councilofmin <- function(eu, ideo=NULL, models=c("unanimity","qmv1_uw","qmv1_uw","qmv1_uw","qmv2_uw"),
+                            rotprespower="3:1:1", portf=NULL, portf_isos=NULL){
+  cm0 <- eu[!is.na(eu$p601) & eu$p601==1, ]
+  cm <- cm0 |> group_by(g101,g105) |> summarise(
           g103=g103[1], g104=g104[1], GOV_POS=GOV_POS[1],
           p611=suppressWarnings(max(p611,na.rm=TRUE)), p612=suppressWarnings(max(p612,na.rm=TRUE)),
           p614=as.integer(any(!is.na(p614)&p614==1)), p615=suppressWarnings(max(p615,na.rm=TRUE)),
           .groups="drop")
   for(v in c("p611","p612","p615")) cm[[v]][!is.finite(cm[[v]])] <- NA
+  # Politikfeld: Ministerposition ersetzt die Regierungsposition, soweit vorhanden
+  portf <- if(is.null(portf)) character(0) else portf[!is.na(portf) & nzchar(portf)]
+  portf <- portf[portf %in% names(cm0)]
+  if(length(portf) && !is.null(ideo)){
+    cm0$.ideo <- cm0[[ideo]]
+    for(i in seq_along(portf)){
+      cm0$.pf <- cm0[[portf[i]]]
+      m <- cm0 |> filter(!is.na(.pf) & .pf>=1 & !is.na(.ideo)) |>
+           group_by(g101,g105) |> summarise(.v=mean(.ideo), .groups="drop")
+      names(m)[3] <- paste0(".mp",i)
+      cm <- cm |> left_join(m, by=c("g101","g105"))
+    }
+    ok <- if(is.null(portf_isos)) TRUE else cm$g101 %in% as.numeric(portf_isos)
+    for(i in rev(seq_along(portf))){ k <- paste0(".mp",i)
+      cm$GOV_POS <- ifelse(ok & !is.na(cm[[k]]), cm[[k]], cm$GOV_POS) }
+    cm <- cm |> select(-dplyr::any_of(paste0(".mp",seq_along(portf))))
+  }
   # Standardpositionen je g105
   cm <- cm |> group_by(g105) |> mutate(
           couofmin_mean_uw   = mean(GOV_POS,na.rm=TRUE),
@@ -193,19 +228,36 @@ eu_councilofmin <- function(eu, models=c("unanimity","qmv1_uw","qmv1_uw","qmv1_u
 
 # --- Orchestrator: komplette EU-Schaetzung (alle Institutionen + Zusammenbau) ---
 # govpos = Laender-GOV_POS (aus estimate_aspm$quarterly, Spalten iso,techq,GOV_POS), external = population/gdp.
+# Politikfeld: comm_portf = Kommissar-Ressorts (p631-p648), coun_portf = nationale Minister-Ressorts
+# (p201-p218). Beide Listen laufen parallel (p2xx + 430 = p6xx). Default = Wirtschaft
+# (Economic affairs -> Finance -> Industry & trade); fuer Green-Growth setzt der Aufrufer Umwelt.
 EU_DEFAULT <- list(
   council   = rep("power",5), pmweight = c("population","gdp","seniority","presidency2"),
   rotprespower = "3:1:1", presoverpm = c(250,470), principal = TRUE,
-  commission = rep("bargaining",5), comm_portf = c("p645","p643"),
+  commission = rep("bargaining",5), comm_portf = c("p638","p637","p644"),
   councilofmin = c("unanimity","qmv1_uw","qmv1_uw","qmv1_uw","qmv2_uw"),
+  coun_portf = c("p208","p207","p214"), coun_portf_isos = NULL,
   euparl = rep("median",5), commonpos = "3:1", codec2 = "1:1")
+# Ressort -> Kommissar-Pendant: p201..p218 entsprechen p631..p648 (Versatz +430)
+eu_comm_portf <- function(p){
+  p <- p[!is.na(p) & nzchar(p)]
+  paste0("p", as.integer(sub("^p","",p)) + 430)
+}
+# Laender, deren Regierungsposition selbst an einer Person haengt (gov(pm|minister:|pmnegot:)).
+# Nur dort traegt der in den Rat entsandte Minister eine eigene Position; bei gov(seats) & Co.
+# vertritt er die Kabinettslinie, also GOV_POS. specs = benannte Liste Laendercode -> Spec-String.
+eu_minister_isos <- function(specs){
+  gv <- sub(".*gov\\(([^)]*)\\).*", "\\1", as.character(unlist(specs)))
+  as.numeric(names(specs))[grepl("^(pm|minister:|pmnegot:)", gv)]
+}
 estimate_eu <- function(d, ideo, govpos, external=NULL, spec=EU_DEFAULT){
   s <- modifyList(EU_DEFAULT, spec)
   eu <- eu_prep(d, ideo, govpos, external=external)
   eucou   <- eu_council(eu, ideo, models=s$council, pmweight=s$pmweight,
                         rotprespower=s$rotprespower, presoverpm=s$presoverpm)
   comm    <- eu_commission(eu, ideo, portf=s$comm_portf, models=s$commission)
-  council <- eu_councilofmin(eu, models=s$councilofmin, rotprespower=s$rotprespower)
+  council <- eu_councilofmin(eu, ideo, models=s$councilofmin, rotprespower=s$rotprespower,
+                             portf=s$coun_portf, portf_isos=s$coun_portf_isos)
   ep      <- eu_parliament(eu, ideo, models=s$euparl)
   eu_assemble(eucou, comm, council, ep, principal=s$principal, commonpos=s$commonpos, codec2=s$codec2)
 }
