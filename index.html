@@ -228,7 +228,9 @@
           gives a dimension — on both the Left–Right and the Green–Growth scale. The Manifesto Project's own
           <b>RILE</b> index is carried alongside them for comparison.</dd>
         <dt>EU institutions</dt><dd>Positions of the European Council, the Commission, the Council of Ministers and
-          the European Parliament, plus an overall EU position weighted by the decision rules of each treaty period.</dd>
+          the European Parliament, plus an overall EU position weighted by the decision rules of each treaty period.
+          Commission and Council of Ministers are read for a chosen policy field: the responsible Commissioner and
+          the minister a country sends to that Council formation, rather than the cabinet as a whole.</dd>
         <dt>Ideological misfit</dt><dd>The distance between a member state's government and the EU position on the
           same scale in the same quarter — how far a national government sits from the EU it is bound by.</dd>
       </dl>
@@ -249,7 +251,9 @@
           how</b> in any given quarter and with which parties, <b>whether a cabinet had a majority</b> and
           <b>which constraints it is facing</b> (veto players), <b>how a party's programme moved</b> over the
           decades, and how far a national government stood from the EU. For the EU itself there are data on the
-          European Council, the Commission, the Council of Ministers and the European Parliament. Everything is
+          European Council, the Commission, the Council of Ministers and the European Parliament — the latter two
+          for the policy field you choose, since the Commissioner and the minister sent to a Council formation
+          differ from one portfolio to the next. Everything is
           quarterly, covers 1945 to the present, and downloads as a plain spreadsheet — no account, no licence, no
           statistical software required.</p>
       </div>
@@ -292,7 +296,8 @@
           dimension), the narrower <b>Core</b> and wider <b>Plus</b> variants with their importances, and
           <b>cohesion</b>. <b>RILE</b> is offered as a single extra column.</dd>
         <dt>EU institutions</dt><dd>Positions of the European Council, Commission, Council of Ministers, Parliament,
-          and the overall EU, modelled per treaty period. You may swap the institutional models.</dd>
+          and the overall EU, modelled per treaty period. You may swap the institutional models and pick the
+          policy field that Commission and Council of Ministers are read for.</dd>
       </dl>
 
       <h4>Choosing your own model — what this adds over a plain download</h4>
@@ -595,6 +600,17 @@
           <tr><td class="ctry">European Parliament</td><td><select id="euParl">
             <option value="default">Default (median)</option><option value="mean_uw">Mean</option>
             <option value="median_uw">Median</option><option value="unanimity">Unanimity</option></select></td></tr>
+          <tr><td class="ctry">Policy field</td><td><div id="euPortf" class="portf"></div>
+            <div class="vp" style="margin-top:8px"><label><input type="checkbox" id="euPortfCond" checked>only
+              where a country's own model rests on the PM or a minister</label></div>
+            <div class="note" style="margin-top:6px">Which portfolio speaks for the EU. The
+            <b>Commission</b> takes the position of the responsible Commissioner, the
+            <b>Council of Ministers</b> that of the minister each country sends to that Council
+            formation. If a portfolio does not exist in a period, the next choice applies.
+            <b>Government position</b> ends the chain: the Council then uses the government position,
+            the Commission its mean. The box above keeps the government position for countries modelled
+            collegially (<code>gov(seats)</code> and the like), where the minister sent to Brussels
+            carries the cabinet line rather than a position of their own — it affects the Council only.</div></td></tr>
           <tr><td class="ctry">Council as principal</td><td><label class="vp" style="display:inline-flex"><label><input type="checkbox" id="euPrincipal" checked> agent positions blended with European Council</label></label></td></tr>
         </tbody></table></div>
       </div>
@@ -668,7 +684,7 @@ const MIN=[["no","No"],["yes;antisys:no","Yes (MCWC)"]];
 const VP=[["gov","gov"],["1ch","1st ch."],["2ch","2nd ch."],["pres","pres"]];
 
 // --- Config aus CSV: Dimensionen & Laender (leicht editierbar in config/*.csv) ---
-let DIMS=[], DIMKEY={};                 // DIMS: [col,label,key] ; DIMKEY[col]=key (DEF-Schluessel)
+let DIMS=[], DIMKEY={}, DIMPF={};       // DIMS: [col,label,key] ; DIMKEY[col]=key ; DIMPF[key]=Politikfeld-Default
 let C=[], EU=[], OECD=[];               // C: [iso3,name,num,spec]
 const NAME={}, NUM={}, SPEC={}, N2NAME={};
 const ctryName=n=>N2NAME[String(n)]||n;
@@ -878,7 +894,8 @@ async function loadConfig(){
     fetch("config/dimensions.csv").then(r=>r.text()),
     fetch("config/countries.csv").then(r=>r.text())]);
   parseCSV(dimTxt.trim()).slice(1).forEach(r=>{ if(!r[0])return;
-    DIMS.push([r[2],r[1],r[0]]); DIMKEY[r[2]]=r[0]; });      // col,label,key
+    DIMS.push([r[2],r[1],r[0]]); DIMKEY[r[2]]=r[0];          // col,label,key
+    DIMPF[r[0]]=(r[3]||"").split(",").map(s=>s.trim()).filter(Boolean); });
   parseCSV(ctyTxt.trim()).slice(1).forEach(r=>{ if(!r[0])return;
     const iso3=r[0],num=+r[1],name=r[2],eu=r[3]=="1",oecd=r[4]=="1",spec=r[5];
     C.push([iso3,name,num,spec]); NAME[iso3]=name; NUM[iso3]=num; SPEC[iso3]=spec; N2NAME[String(num)]=name;
@@ -890,7 +907,7 @@ async function loadConfig(){
 }
 
 const st={dim:"",gran:"quarterly",sel:["GER","FRA","SWE"],models:{},modified:{},chartIso:null,
-          pg:{c:0,p:0,eu:0,ci:0}};
+          euPf:[], pg:{c:0,p:0,eu:0,ci:0}};
 const $=s=>document.querySelector(s);
 
 // ===== Geteilte Tabellenanzeige mit Blaettern (alle 4 Reiter) =====
@@ -1457,6 +1474,12 @@ document.addEventListener("change",e=>{
   if(e.target.id==="py1Sel"){ st.py1=Math.max(+e.target.value, st.py0); presentP(); }
   if(e.target.id==="euy0Sel"){ st.euy0=Math.min(+e.target.value, st.euy1); presentEU(); }
   if(e.target.id==="euy1Sel"){ st.euy1=Math.max(+e.target.value, st.euy0); presentEU(); }
+  if(e.target.matches("#euPortf select[data-eupf]")){          // Politikfeld 1./2./3. Wahl
+    const cur=st.euPf.length?st.euPf.slice():euPfDefault();
+    cur[+e.target.dataset.eupf]=e.target.value;
+    st.euPf=[cur[0]||"gov", cur[1]||"gov", cur[2]||"gov"];
+    euPortfRender(); }
+  if(e.target.id==="euPortfCond") euPortfRender();
 });
 function pRowsToCSV(rows){ const head=pOUT().join(",");
   const body=rows.map(r=>r.map(v=>/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v).join(",")).join("\n");
@@ -1519,9 +1542,35 @@ function euDimsRender(){
     dimTile("data-ed","custom","Custom","your formula",st.euDim==="custom","custom");
   $("#euFormulaBox").hidden = st.euDim!=="custom";
 }
+// Politikfeld: Vorgabe je Dimension (aus config/dimensions.csv); Custom-Dimension erbt die von LR.
+function euPfDefault(){ return (DIMPF[st.euDim] || DIMPF[DIMS[0][2]] || []).slice(); }
+function euPortfRender(){
+  const cur=st.euPf.length?st.euPf:euPfDefault();
+  // "gov" = Kette hier beenden -> Ministerrat nimmt die Regierungsposition, Kommission ihr Mittel
+  const opts=sel=>`<option value="gov"${sel&&sel!=="gov"?"":" selected"}>Government position</option>`+
+    PORTF.map(p=>`<option value="${p[0]}"${p[0]===sel?" selected":""}>${p[1]}</option>`).join("");
+  $("#euPortf").innerHTML=["1st","2nd","3rd"].map((lab,i)=>
+    `<label>${lab} <select data-eupf="${i}">${opts(cur[i]||"gov")}</select></label>`).join("");
+  // Stufen nach dem Kettenende sind wirkungslos -> ausgrauen, damit niemand dort etwas erwartet
+  const n = euPortf().length;
+  document.querySelectorAll("#euPortf label").forEach((l,i)=>{
+    const dead = i>n; l.style.opacity = dead?.45:1; l.querySelector("select").disabled = dead; });
+  const pure = n===0;                         // reine Regierungsposition -> Bedingung gegenstandslos
+  $("#euPortfCond").disabled = pure;
+  $("#euPortfCond").closest("label").style.opacity = pure ? .45 : 1;
+}
+// Kette bis zur ersten "Regierungsposition"; danach greift ohnehin der Rueckfall.
+function euPortf(){ const v=st.euPf.length?st.euPf:euPfDefault(); const out=[];
+  for(const p of v){ if(!p||p==="gov") break; out.push(p); } return out; }
+// Laender, deren eigenes Modell an einer Person haengt (gov(pm|minister|pmnegot)) - nur dort traegt
+// der entsandte Minister eine eigene Position. Spiegelt eu_minister_isos() in lib_aspm_eu.R.
+function euMinisterIsos(){ return C.filter(c=>/gov\((pm|minister:|pmnegot:)/.test(c[3])).map(c=>c[2]); }
+function euPortfIsos(){ return $("#euPortfCond").checked ? euMinisterIsos() : []; }
 function euModels(){ return {council:$("#euCouncil").value, commission:$("#euCommission").value,
-  councilmin:$("#euCouncilmin").value, euparl:$("#euParl").value, principal:$("#euPrincipal").checked}; }
-function euIsCustom(m){ return m.council!=="default"||m.commission!=="default"||m.councilmin!=="default"||m.euparl!=="default"||!m.principal; }
+  councilmin:$("#euCouncilmin").value, euparl:$("#euParl").value, principal:$("#euPrincipal").checked,
+  portf:euPortf(), portfIsos:euPortfIsos(), portfCond:$("#euPortfCond").checked}; }
+function euIsCustom(m){ return m.council!=="default"||m.commission!=="default"||m.councilmin!=="default"||
+  m.euparl!=="default"||!m.principal||!m.portfCond||m.portf.join(",")!==euPfDefault().join(","); }
 function toYearlyEU(qrows){                          // Mittel je Jahr ueber die 5 Positionen
   const g=new Map();
   for(const r of qrows){ const y=r[0];
@@ -1591,7 +1640,7 @@ async function euRun(){
       await webr.objs.globalEnv.bind("isos_all", C.map(c=>c[2]));
       await webr.objs.globalEnv.bind("specs_all", C.map(c=>c[3]));
       await webr.objs.globalEnv.bind("formula", formula);
-      const call=`eu_run_custom(formula, isos_all, specs_all, "${m.council}","${m.commission}","${m.councilmin}","${m.euparl}","${m.principal?1:0}")`;
+      const call=`eu_run_custom(formula, isos_all, specs_all, "${m.council}","${m.commission}","${m.councilmin}","${m.euparl}","${m.principal?1:0}", portf="${m.portf.join(",")}", portf_isos="${m.portfIsos.join(",")}")`;
       const csv=await webr.evalRString(call);
       euLastQ = csv.trim().split("\n").slice(1).filter(l=>l.length).map(l=>l.split(",").map(s=>s.replace(/^"|"$/g,"")));
       euSrc = "custom scale · ";
@@ -1602,7 +1651,7 @@ async function euRun(){
     } else {
       $("#euStatus").innerHTML='<span class="spin"></span>computing custom EU models… (first run loads R ~30 s, then ~15 s)';
       await ensureEU();
-      const call=`eu_run("${dimCol}","${m.council}","${m.commission}","${m.councilmin}","${m.euparl}","${m.principal?1:0}")`;
+      const call=`eu_run("${dimCol}","${m.council}","${m.commission}","${m.councilmin}","${m.euparl}","${m.principal?1:0}", portf="${m.portf.join(",")}", portf_isos="${m.portfIsos.join(",")}")`;
       const csv=await webr.evalRString(call);
       euLastQ = csv.trim().split("\n").slice(1).filter(l=>l.length).map(l=>l.split(",").map(s=>s.replace(/^"|"$/g,"")));
       euSrc = st.euDim+" · custom · ";
@@ -1649,7 +1698,7 @@ function switchView(v){
   $("#view-parties").hidden   = v!=="parties";
   $("#view-eu").hidden        = v!=="eu";
   if(v==="parties"){ pDimsRender(); pChips(); loadParties(); }
-  if(v==="eu"){ if(!st.euDim) st.euDim=DIMS[0][2]; euDimsRender(); loadEU().then(euRun); }
+  if(v==="eu"){ if(!st.euDim) st.euDim=DIMS[0][2]; euDimsRender(); euPortfRender(); loadEU().then(euRun); }
 }
 
 // zentrale Klick-Route fuer Parteien-Ansicht (ergaenzt den Haupt-Listener)
@@ -1663,7 +1712,9 @@ document.addEventListener("click",e=>{
     $("#pGran").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b===psg)); presentP(); return; }
   const pdl=e.target.closest("#view-parties .dlbtn"); if(pdl && pLastRows.length){
     saveAs(pRowsToCSV(pLastRows), "pip_parties_"+st.pDim+"_"+st.pgran+"."+pdl.dataset.pfmt, pdl.dataset.pfmt, $("#pStatus")); return; }
-  const ed=e.target.closest("#euDims .dim"); if(ed){ st.euDim=ed.dataset.ed; euDimsRender();
+  const ed=e.target.closest("#euDims .dim"); if(ed){ st.euDim=ed.dataset.ed;
+    st.euPf=[];                         // Politikfeld auf die Vorgabe der neuen Dimension zuruecksetzen
+    euDimsRender(); euPortfRender();
     if(st.euDim!=="custom") euRun();    // Custom braucht erst eine Formel -> nicht sofort (teuer) mitlaufen
     return; }
   const erb=e.target.closest("#euRunBtn"); if(erb){ euRun(); return; }
