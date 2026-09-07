@@ -1254,7 +1254,10 @@ $("#runBtn").addEventListener("click",async()=>{
     setStatus(isCustomDim ? "done — "+custIsos.length+" custom (custom scale, always live)."
       : custIsos.length? "done — "+defIsos.length+" standard + "+custIsos.length+" custom." : "done — all from standard models (instant).");
     $("#runBtn").disabled=false;
-  }catch(err){ setStatus("error: "+err.message); eng(webrReady?"engine ready":"ready"); $("#runBtn").disabled=false; }
+  }catch(err){ setStatus("error: "+err.message); eng(webrReady?"engine ready":"ready"); $("#runBtn").disabled=false;
+    // Ergebnisse des VORHERIGEN Laufs ausblenden: sonst stehen nach einem Fehler weiter alte Zahlen
+    // in der Tabelle, die wie ein gueltiges Resultat der neuen Einstellung aussehen.
+    lastQ=[]; $("#results").hidden=true; }
 });
 
 // Anzeige aus den gemergten Quartalszeilen erzeugen (Q direkt, Y aggregiert) — ohne Neuberechnung

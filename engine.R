@@ -224,9 +224,16 @@ vetoplayer <- function(d, ideo, basics, gov, vp, minogov_map=NULL, eu_pos=NULL){
   if("1ch" %in% vp){ cm$a<-gg$median1st; cn$a<-gg$median1st }
   if("2ch" %in% vp){ cm$b<-gg$median2nd; cn$b<-gg$median2nd }
   if("pres"%in% vp){ cm$c<-gg$pres;      cn$c<-gg$pres }
-  gg$VP_RANGE <- do.call(rmax,cm) - do.call(rmin,cn)
-  ep <- eu_point(d, gg$g105, eu_pos); cm$eu<-ep; cn$eu<-ep
-  gg$VP_RANGE_EU <- do.call(rmax,cm) - do.call(rmin,cn)
+  # Kein einziger Vetospieler gewaehlt -> eine Spanne ist nicht definiert, beide Spalten bleiben leer.
+  # Frueher liefen rmax()/rmin() hier ohne Argumente (cbind() -> NULL) und die Berechnung brach ab.
+  # Auch VP_RANGE_EU bleibt leer: eine "Spanne" aus dem EU-Punkt allein waere 0 und damit irrefuehrend.
+  if(!length(cm)){
+    gg$VP_RANGE <- NA_real_; gg$VP_RANGE_EU <- NA_real_
+  } else {
+    gg$VP_RANGE <- do.call(rmax,cm) - do.call(rmin,cn)
+    ep <- eu_point(d, gg$g105, eu_pos); cm$eu<-ep; cn$eu<-ep
+    gg$VP_RANGE_EU <- do.call(rmax,cm) - do.call(rmin,cn)
+  }
   gg$govmin[gg$g106==9]<-NA; gg$govmax[gg$g106==9]<-NA
   gg$VP_RANGE[gg$g106==9]<-NA; gg$VP_RANGE_EU[gg$g106==9]<-NA
   gg |> select(g101,g105,govmin,govmax,VP_RANGE,VP_RANGE_EU)
