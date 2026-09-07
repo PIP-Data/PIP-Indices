@@ -952,24 +952,37 @@ document.addEventListener("click",e=>{
 
 // Ein Land hat 1..n Zeitsegmente: st.models[iso] = [{from,gov,portf,min,vp}, ...], nach `from` sortiert.
 // Segment 0 gilt ab Datenbeginn (from=null), jedes weitere ab seinem Startjahr.
+// Politikfeld-Vorgabe fuer den Country-Reiter: dieselbe Vorgabe je Dimension wie im EU-Reiter
+// (config/dimensions.csv, Spalte default_portf), aber nur die ersten 2 Ressorts - die Country-
+// Oberflaeche hat nur 2 Faelle (1st/2nd), der EU-Reiter bis zu 3. st.dim ist hier die Datenspalte
+// (z.B. "ja10f"), DIMKEY bildet sie auf den Dimensions-Key ("LR") ab, unter dem DIMPF gefuellt ist.
+function cPfDefault(){ return (DIMPF[DIMKEY[st.dim]] || DIMPF[DIMS[0][2]] || []).slice(0,2); }
 function parse(spec){ // spec-string -> Segment
   const gv=(spec.match(/gov\(([^)]*)\)/)||[])[1]||"seats";
   const mn=(spec.match(/minority\(([^)]*)\)/)||[])[1]||"no";
   const vp=((spec.match(/vp\(([^)]*)\)/)||[])[1]||"gov").split(",").map(s=>s.trim());
   let gov=gv, portf=null;
   const mm=gv.match(/^(minister|pmnegot):(.*)$/);
-  if(mm){ gov=mm[1]; portf=mm[2].trim()==="cabinet"?["cabinet"]:mm[2].split(",").map(s=>s.trim()).filter(Boolean); }
+  if(mm){ gov=mm[1]; portf=mm[2].trim()==="cabinet"?["cabinet"]:mm[2].split(",").map(s=>s.trim()).filter(Boolean);
+    // "DIMPF" ist der Platzhalter aus config/countries.csv - je Dimension aufloesen statt fest zu verdrahten.
+    if(portf.length===1 && portf[0]==="DIMPF") portf=cPfDefault(); }
   return {from:null, gov, portf, min:mn.includes("yes")?mn:"no", vp};
 }
 function segSpec(sg){  // Segment -> Config-String fuer die Engine
   let gv=sg.gov;
   if(sg.gov==="minister"||sg.gov==="pmnegot"){
     const pf=(sg.portf||[]).filter(Boolean);
-    gv=sg.gov+":"+(pf.length?pf.join(","):"p215");
+    gv=sg.gov+":"+(pf.length?pf.join(","):cPfDefault().join(","));
   }
   return `gov(${gv}) minority(${sg.min}) vp(${sg.vp.join(",")})`;
 }
 function ensureModel(iso){ if(!st.models[iso]) st.models[iso]=[parse(SPEC[iso])]; }
+// Beim Wechsel der Skala (LR/GG/RILE) fuer alle NICHT vom Nutzer angepassten Laender das Modell neu
+// aus dem Rohspec ableiten, damit die 1st/2nd-Ressort-Anzeige der neuen Skala folgt (z.B. LR/RILE:
+// Wirtschaft/Finanzen, GG: Umwelt/Landwirtschaft). Angepasste Laender (st.modified) bleiben unberuehrt.
+function refreshUnmodifiedModels(){
+  st.sel.forEach(iso=>{ if(!st.modified[iso]) st.models[iso]=[parse(SPEC[iso])]; });
+}
 function sortSegs(iso){ st.models[iso].sort((a,b)=>(a.from??-1e9)-(b.from??-1e9)); }
 
 // Pole je Skala fuer den Farbverlauf unter der Kachel. RILE ist bewusst gedaempft (nachrangige Skala).
@@ -995,7 +1008,7 @@ function portfSel(sg){          // zwei Ressort-Selects: 1. Wahl, 2. Wahl (Fallb
   const pf=sg.portf||[], extra = sg.gov==="pmnegot" ? [["cabinet","Whole cabinet"]] : [];
   const opts=(sel,none)=> (none?`<option value="">— none —</option>`:"")+
     PORTF.concat(extra).map(o=>`<option value="${o[0]}"${o[0]===sel?" selected":""}>${o[1]}</option>`).join("");
-  return `<div class="portf"><label>1st <select data-k="pf0">${opts(pf[0]||"p215",false)}</select></label>`+
+  return `<div class="portf"><label>1st <select data-k="pf0">${opts(pf[0]||cPfDefault()[0]||"p215",false)}</select></label>`+
          `<label>then <select data-k="pf1">${opts(pf[1]||"",true)}</select></label></div>`;
 }
 function rows(){
@@ -1023,7 +1036,7 @@ function rows(){
 function render(){dims();chips();rows();}
 
 document.addEventListener("click",e=>{
-  const d=e.target.closest("#dims .dim"); if(d){st.dim=d.dataset.d;dims();return;}
+  const d=e.target.closest("#dims .dim"); if(d){st.dim=d.dataset.d;dims();refreshUnmodifiedModels();rows();return;}
   const ch=e.target.closest(".chip[data-iso]"); if(ch){const i=ch.dataset.iso,k=st.sel.indexOf(i);
     if(k>=0)st.sel.splice(k,1);else{st.sel.push(i);ensureModel(i);} chips();rows();return;}
   const p=e.target.closest(".preset[data-preset]"); if(p){const v=p.dataset.preset;
@@ -1038,7 +1051,7 @@ document.addEventListener("change",e=>{
   const tr=e.target.closest("tr[data-iso][data-seg]"); if(!tr)return;
   const iso=tr.dataset.iso, sg=st.models[iso][+tr.dataset.seg]; if(!sg) return;
   if(e.target.matches("select[data-k=gov]")){ sg.gov=e.target.value;
-    if((sg.gov==="minister"||sg.gov==="pmnegot") && !(sg.portf||[]).length) sg.portf=["p215","p213"]; }
+    if((sg.gov==="minister"||sg.gov==="pmnegot") && !(sg.portf||[]).length) sg.portf=cPfDefault(); }
   if(e.target.matches("select[data-k=min]")) sg.min=e.target.value;
   if(e.target.matches("select[data-k=pf0]")) sg.portf=[e.target.value,(sg.portf||[])[1]].filter(Boolean);
   if(e.target.matches("select[data-k=pf1]")) sg.portf=[(sg.portf||[])[0]||"p215",e.target.value].filter(Boolean);
