@@ -146,6 +146,11 @@
   .fineprint{font-size:12px;color:var(--muted);margin-top:6px!important}
   /* Hervorgehobener Kasten: der nicht-wissenschaftliche Nutzen soll zwischen den akademischen
      Absaetzen NICHT untergehen (ausdruecklicher Nutzerwunsch) -> eigene Flaeche + Label. */
+  /* Unterebene innerhalb eines h4-Abschnitts der Klappen (z.B. "Government positions" unter
+     "Choosing your own model") - bewusst schwaecher als h4, damit die Gliederung erkennbar bleibt. */
+  .gbody h5{margin:14px 0 4px;font-size:13.5px;font-weight:650;color:var(--ink)}
+  .gbody ol.modellist{margin:4px 0 0;padding-left:22px}
+  .gbody ol.modellist li{margin:0 0 7px;line-height:1.55}
   .usebox{margin:16px 0 4px;padding:13px 15px;background:var(--accent-soft);
     border:1px solid color-mix(in srgb,var(--accent) 38%,transparent);border-radius:var(--r-sm)}
   .usebox .ub-lab{display:inline-block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
@@ -301,29 +306,62 @@
       </dl>
 
       <h4>Choosing your own model — what this adds over a plain download</h4>
-      <p>Every result starts from a <b>standard model</b>: the operationalization used in the PIP publications,
-        chosen on the basis of the relevant theories and, for the government models, on an empirical analysis
-        (Jahn 2018). These defaults are precomputed, so the published measures appear instantly without your having
-        to touch a single setting.</p>
-      <p>But an operationalization is a theoretical decision, not a fact. Others may prefer a different one, and a
-        specific research question may call for a different emphasis. Every such decision is therefore exposed as a
-        control you can change — the result is then recomputed live, for that country alone:</p>
-      <dl>
-        <dt>Government</dt><dd>How the government's position is aggregated: weighted by <b>seats</b>, by
-          <b>cabinet members</b> or by <b>portfolios</b>, as an <b>unweighted mean</b>, or as the position of the
-          <b>Prime Minister</b>, of a <b>specific minister</b> (any of 18 portfolios), of the <b>PM negotiating with
-          that minister</b>, or under <b>unanimity</b>.</dd>
-        <dt>Minority cabinets</dt><dd>Whether a minority government is treated like any other cabinet, or as a
-          minimal connected winning coalition together with its support parties.</dd>
-        <dt>Veto players</dt><dd>Which actors count as a constraint — government, first chamber, second chamber,
-          president — each switched on or off to match your own definition of a veto player. The EU can be added on
-          top as a further veto player (<b>VP_RANGE_EU</b>).</dd>
-        <dt>EU institutions</dt><dd>The decision rule applied to each body per treaty period: qualified majority
-          (fixed or rotating presidency), mean, median, unanimity, bargaining, or power weights.</dd>
-        <dt>The scale itself</dt><dd>LR, GG, RILE — or one you define yourself under <b>Custom</b> (see below).</dd>
-      </dl>
-      <p>This is what separates the tool from a static data download: you are not tied to one author's
-        operationalization, and you can see straight away how much a finding depends on it.</p>
+      <p>Every result starts from a <b>default model</b>: the operationalization used in the PIP publications,
+        chosen on the basis of the relevant theories and, for the government models, on an empirical analysis.
+        These defaults are precomputed, so the published measures appear instantly without your having to touch a
+        single setting. But an operationalization is a theoretical decision, not a fact — each one is exposed as a
+        control you can change, and the result is then recomputed live for that country alone. Here is a short
+        summary of the default models.</p>
+
+      <h5>Government positions</h5>
+      <p>The positions of governments can be conceptualized differently. We offer three alternatives and an
+        additional country-specific model for the United States (Jahn 2018; 2026).</p>
+      <ol class="modellist">
+        <li><b>Collective government model.</b> The positions of the governing parties are weighted by their seats
+          in parliament (as a share of the seats of all governing parties). This is the conventional model for
+          dealing with coalition governments. It is also often called the cabinet model.</li>
+        <li><b>Minister model.</b> Laver and Shepsle (1996) suggest that ministers have complete discretion in
+          their policy area. We therefore present models for 15 line ministries. The default for the Left–Right
+          dimension and for RILE is the Ministry of Economic Affairs (and, where it does not exist, the Ministry of
+          Finance). For the Green–Growth dimension it is the Ministry of the Environment (and, where it does not
+          exist, the Ministry of Agriculture). This model is open to policy-specific analysis: you can decide which
+          ministry comes closest to the policy you are interested in.</li>
+        <li><b>Prime minister model.</b> Poguntke and Webb (2005) postulate that prime ministers are increasing
+          their power and that they may be decisive. We therefore also show data in which the government position
+          is the position of the prime minister's party. As a default we do not use the position of the PM alone,
+          but a seat-weighted average of the positions of the PM's party and the minister's party
+          (“PM negotiated with minister(s)”).</li>
+        <li><b>United States.</b> The United States is coded differently because of its special legislative
+          process (Jahn 2018: 71–75).</li>
+        <li><b>Time.</b> Coding is time-sensitive, since systems of government change (see Table 3 in Jahn 2026).
+          Where a model or a veto player applies only to part of the period, the country shows more than one
+          row — one per period.</li>
+      </ol>
+
+      <h5>Veto players</h5>
+      <p>We use the operationalization of veto players for macro-comparative analysis suggested by George Tsebelis
+        (2002: chapters 7 and 8), in which the ideological range between the governing parties, the relevant second
+        chamber and relevant presidents enters into the equation. Tsebelis's original model considers the second
+        chambers of Australia, Canada, Germany and Switzerland, as well as the president of Portugal, as veto
+        players. In another study, Tsebelis and Money (1997: 211) claim “…that second chambers always exercise an
+        influence on final outcomes of legislation. This is a trivial point when upper chambers can veto
+        legislation, as in the United States, Switzerland and Germany. However, it is our contention that all
+        second chambers exercise influence even if they are considered weak or insignificant”. We therefore include
+        all second chambers that are strong or medium-strength according to Arend Lijphart (2012; see Jahn 2010).
+        These are the second chambers of Belgium (until 1993), Denmark (until 1953), France, Italy, Japan, the
+        Netherlands, Spain and Sweden (until 1970), in addition to Australia, Canada, Germany and Switzerland.
+        Furthermore, we include the second chamber of Romania, which is not covered by Lijphart's study. Presidents
+        are included for Bulgaria, Latvia and Lithuania (Tsebelis and Rizova 2007); the president of Finland is
+        included until 2000.</p>
+      <p>In the case of minority governments, we include the ideologically closest opposition party as an
+        additional veto player (for details see Jahn 2018: 68–71).</p>
+      <p>In all estimations we model the United States, France and Switzerland differently, because of the role of
+        supermajorities, cohabitation and referendums, as described by Jahn (2018: 71–78).</p>
+      <p class="fineprint">Please also consult the
+        <a href="docs/Codebook_PIP_v2022-03.pdf" target="_blank" rel="noopener">codebook</a> for technical
+        details.</p>
+
+      <p class="fineprint">All works cited here are listed under <i>Documentation &amp; publications</i>.</p>
 
       <h4>Custom scale</h4>
       <p>Every tab has a fourth scale option, <b>Custom</b>, alongside LR/GG/RILE: build your own from
@@ -385,8 +423,32 @@
           <a href="https://doi.org/10.1057/s41295-022-00305-5" target="_blank" rel="noopener">doi:10.1057/s41295-022-00305-5</a></li>
         <li>Jahn, Detlef / Düpont, Nils / Rachuj, Martin (2017): <em>Left-Right Party Ideology in 36 OECD Countries.</em>
           Greifswald Comparative Politics Working Paper Series 10. University of Greifswald.</li>
-        <li>Jahn, Detlef: <em>What the Rules Cannot Show: Cabinet Governance in 34 Parliamentary Democracies,
-          2005–2021.</em> Manuscript. — the centre-of-gravity approach to cabinet governance.</li>
+        <li>Jahn, Detlef (2026): <em>What the Rules Cannot Show: Cabinet Governance in 34 Parliamentary
+          Democracies, 2005–2021.</em> Manuscript. — the centre-of-gravity approach to cabinet governance, and the
+          empirical basis for the government models (Table 3).</li>
+      </ul>
+
+      <h4>Further works cited</h4>
+      <p class="fineprint">Referenced in the model descriptions under <i>How to use this tool</i>.</p>
+      <ul class="reflist">
+        <li>Laver, Michael / Shepsle, Kenneth A. (1996): <em>Making and Breaking Governments. Cabinets and
+          Legislatures in Parliamentary Democracies.</em> Cambridge: Cambridge University Press. — ministerial
+          discretion, the basis of the minister model.</li>
+        <li>Lijphart, Arend (2012): <em>Patterns of Democracy: Government Forms and Performance in Thirty-Six
+          Countries</em> (2nd edn). New Haven: Yale University Press. — the strength of second chambers.</li>
+        <li>Poguntke, Thomas / Webb, Paul (eds.) (2005): <em>The Presidentialization of Politics: A Comparative
+          Study of Modern Democracies.</em> Oxford: Oxford University Press. — the basis of the prime minister
+          model.</li>
+        <li>Tsebelis, George (2002): <em>Veto Players: How Political Institutions Work.</em> New York: Princeton
+          University Press. — the veto-player framework.</li>
+        <li>Tsebelis, George (2010): Veto Player Theory and Policy Change: An Introduction. In: König, Thomas /
+          Debus, Marc / Tsebelis, George (eds.), <em>Reform Processes and Policy Change. Veto Players and
+          Decision-Making in Modern Democracies.</em> New York: Springer, 3–18.</li>
+        <li>Tsebelis, George / Rizova, Tatiana P. (2007): Presidential Conditional Agenda Setting in the Former
+          Communist Countries. <em>Comparative Political Studies</em> 40(10): 1155–1182. — presidents as veto
+          players in Central and Eastern Europe.</li>
+        <li>Tsebelis, George / Money, Jeannette (1997): <em>Bicameralism.</em> Cambridge: Cambridge University
+          Press. — the influence of second chambers.</li>
       </ul>
     </div>
   </details>
@@ -976,12 +1038,25 @@ function segSpec(sg){  // Segment -> Config-String fuer die Engine
   }
   return `gov(${gv}) minority(${sg.min}) vp(${sg.vp.join(",")})`;
 }
-function ensureModel(iso){ if(!st.models[iso]) st.models[iso]=[parse(SPEC[iso])]; }
+// Ein default_spec kann MEHRERE Perioden enthalten, getrennt durch "||", jede Folgeperiode mit
+// Startjahr davor: "gov(...) vp(gov,pres) || 2001: gov(...) vp(gov)". Damit lassen sich zeitlich
+// begrenzte Vetospieler abbilden (Finnland: Praesident nur bis 2000; Belgien: 2. Kammer bis 1993).
+// Faelle, die schon in den Daten enden (Schweden 1970, Daenemark 1953 - median2nd danach leer),
+// brauchen KEINEN Eintrag: die Einstellung laeuft dort von selbst ins Leere.
+function parseSegs(spec){
+  return String(spec).split("||").map((part,i)=>{
+    part=part.trim(); let from=null;
+    const m=part.match(/^(\d{4})\s*:\s*/);
+    if(m){ from=+m[1]; part=part.slice(m[0].length); }
+    const sg=parse(part); sg.from = i===0 ? null : from; return sg;
+  });
+}
+function ensureModel(iso){ if(!st.models[iso]) st.models[iso]=parseSegs(SPEC[iso]); }
 // Beim Wechsel der Skala (LR/GG/RILE) fuer alle NICHT vom Nutzer angepassten Laender das Modell neu
 // aus dem Rohspec ableiten, damit die 1st/2nd-Ressort-Anzeige der neuen Skala folgt (z.B. LR/RILE:
 // Wirtschaft/Finanzen, GG: Umwelt/Landwirtschaft). Angepasste Laender (st.modified) bleiben unberuehrt.
 function refreshUnmodifiedModels(){
-  st.sel.forEach(iso=>{ if(!st.modified[iso]) st.models[iso]=[parse(SPEC[iso])]; });
+  st.sel.forEach(iso=>{ if(!st.modified[iso]) st.models[iso]=parseSegs(SPEC[iso]); });
 }
 function sortSegs(iso){ st.models[iso].sort((a,b)=>(a.from??-1e9)-(b.from??-1e9)); }
 

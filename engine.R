@@ -75,7 +75,8 @@ gov_pm <- function(d, ideo, basics){
         wsum       = sum(ifelse(ing(p103) & !is.na(.ideo), .ideo*p303, 0), na.rm=TRUE),
         .groups="drop") |> mutate(GOV_POS = ifelse(!is.na(pm), pm, ifelse(newsumseat>0, wsum/newsumseat, NA_real_)))
   g <- g |> left_join(basics |> select(g101,g105,median1st,g106), by=c("g101","g105"))
-  g$GOV_POS[g$newsumseat==0 & !is.na(g$GOV_POS) & g$GOV_POS==0] <- g$median1st[g$newsumseat==0 & !is.na(g$GOV_POS) & g$GOV_POS==0]
+  # Expertenregierung (newsumseat==0): kein Rueckfall hier, GOV_POS bleibt NA - siehe gov_minister().
+  # estimate_country() setzt den Median der 1. Kammer erst nach der Minderheitsregel ein.
   g$GOV_POS[g$g106==9] <- NA
   g |> select(g101,g105,GOV_POS,newsumseat)
 }
@@ -112,8 +113,11 @@ gov_minister <- function(d, ideo, basics, portf){
   for(pf in portf) g$GOV_POS <- ifelse(is.na(g$GOV_POS), g[[pf]], g$GOV_POS)
   g$GOV_POS <- ifelse(is.na(g$GOV_POS), g$swpos, g$GOV_POS)
   g <- g |> left_join(basics |> select(g101,g105,median1st,g106), by=c("g101","g105"))
-  fb <- g$newsumseat==0 & !is.na(g$GOV_POS) & g$GOV_POS==0
-  g$GOV_POS[fb] <- g$median1st[fb]; g$GOV_POS[g$g106==9] <- NA
+  # Expertenregierung (newsumseat==0): hier BEWUSST kein Rueckfall auf median1st - GOV_POS bleibt NA.
+  # estimate_country() setzt den Median der 1. Kammer erst NACH der Minderheitsregel ein. Grund:
+  # minority_mcwc() misst die ideologische Naehe der Oppositionsparteien an GOV_POS; ein hier schon
+  # gesetzter Wert wuerde die Auswahl der Stuetzparteien verschieben (Nutzerentscheid 9.9.2026).
+  g$GOV_POS[g$g106==9] <- NA
   g |> select(g101,g105,GOV_POS,newsumseat)
 }
 
@@ -405,6 +409,13 @@ estimate_country <- function(dc, ideo, spec, referenda=NULL, eu_pos=NULL){
     momin <- mo |> filter(!is.na(minoritygov) & minoritygov==1)
     minogov_map <- setNames(momin$minogov, paste(momin$g101,momin$g105))
   }
+  # Expertenregierung: liefert weder das Regierungsmodell (keine Regierungspartei mit Ideologiewert)
+  # noch die Minderheitsregel (keine Stuetzparteien) einen Wert, dann Median der 1. Kammer.
+  # BEWUSST erst hier: vor minority_mcwc() gesetzt, wuerde dieser Wert dort als Bezugspunkt fuer die
+  # ideologische Naehe dienen und die Auswahl der Stuetzparteien verschieben (Nutzerentscheid
+  # 9.9.2026 - nur Luecken fuellen, bestehende Werte unveraendert lassen).
+  fbx <- is.na(gov$GOV_POS) & gov$newsumseat==0 & !is.na(gov$median1st)
+  gov$GOV_POS[fbx] <- gov$median1st[fbx]
   if("special_aspm" %in% spec$vp){
     vpt <- if(iso==250) vp_special_fra(dc, ideo, basics, gov, minogov_map, eu_pos)
            else if(iso==756) vp_special_swi(dc, ideo, basics, gov, referenda, minogov_map, eu_pos)
