@@ -18,10 +18,14 @@
   /* Flaechen sind bewusst nicht reinweiss, sondern minimal ins Petrol getoent (Grundfarbe der App). */
   :root{--ground:#EDF2F4;--surface:#FAFCFD;--surface-2:#F3F8F9;--ink:#17232E;--muted:#5A6A78;--line:#DCE5E9;
     --accent:#06727F;--accent-ink:#045A66;--accent-soft:#D5EAED;--good:#2F8A57;--warn:#B7791F;--crit:#C0453F;
+    /* Eigenes, ruhiges Gruen fuer den Entlastungs-Kasten ("nothing to set up") - bewusst NICHT das
+       Petrol der Bereichsfarbe, damit er sich vom Journalisten-Kasten (accent-soft) unterscheidet. */
+    --tip-soft:#E4F2E9;--tip-ink:#1F6B41;--tip-line:#9CCDB2;
     --mono:ui-monospace,"Cascadia Code",Consolas,monospace;--r:12px;--r-sm:8px;
     --shadow:0 1px 2px rgba(23,35,46,.06),0 6px 20px rgba(23,35,46,.06)}
   @media(prefers-color-scheme:dark){:root{--ground:#0E1620;--surface:#16202C;--surface-2:#1B2733;--ink:#E6EDF3;
-    --muted:#93A3B2;--line:#26343F;--accent:#2FB6C2;--accent-ink:#7FE0E9;--accent-soft:#0F343A}}
+    --muted:#93A3B2;--line:#26343F;--accent:#2FB6C2;--accent-ink:#7FE0E9;--accent-soft:#0F343A;
+    --tip-soft:#14291E;--tip-ink:#8FD6AC;--tip-line:#2E5C42}}
   *{box-sizing:border-box}[hidden]{display:none!important}
   body{margin:0;background:var(--ground);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
   .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
@@ -31,7 +35,9 @@
   .mark{font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:23px} .mark b{color:var(--accent)}
   /* Zitationsangabe im Kopf: die Seite ist eine zitierfaehige Datenquelle -> Version + Stand sichtbar. */
   .topright{display:flex;flex-direction:column;align-items:flex-end;gap:5px;margin-left:auto}
-  .cite{font-size:11.5px;line-height:1.35;color:var(--muted);text-align:right}
+  /* Zitationsangabe im Kopf: bewusst groesser als die uebrige Kleinschrift - sie soll beim
+     Ueberfliegen nicht untergehen, ohne der Wortmarke die Aufmerksamkeit zu nehmen. */
+  .cite{font-size:13px;line-height:1.45;color:var(--muted);text-align:right}
   .cite b{color:var(--ink);font-weight:650} .cite em{font-style:italic}
   @media(max-width:640px){
     .top{flex-direction:column;align-items:flex-start;gap:8px}
@@ -162,6 +168,13 @@
   .gbody h5{margin:14px 0 4px;font-size:13.5px;font-weight:650;color:var(--ink)}
   .gbody ol.modellist{margin:4px 0 0;padding-left:22px}
   .gbody ol.modellist li{margin:0 0 7px;line-height:1.55}
+  /* Entlastungs-Kasten: die eine Botschaft, die Gelegenheitsnutzer brauchen ("du musst nichts
+     einstellen"). Eigene, gruenliche Pastellfarbe, damit er nicht mit dem Journalisten-Kasten
+     (.usebox, petrol) verwechselt wird. */
+  .tipbox{margin:8px 0 4px;padding:13px 15px;background:var(--tip-soft);
+    border:1px solid var(--tip-line);border-left:4px solid var(--tip-ink);border-radius:var(--r-sm)}
+  .gbody .tipbox p{margin:0;color:var(--ink)}
+  .gbody .tipbox p + p{margin-top:8px}
   .usebox{margin:16px 0 4px;padding:13px 15px;background:var(--accent-soft);
     border:1px solid color-mix(in srgb,var(--accent) 38%,transparent);border-radius:var(--r-sm)}
   .usebox .ub-lab{display:inline-block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
@@ -317,10 +330,12 @@
       </dl>
 
       <h4>The default model — nothing to set up</h4>
-      <p>You do not need to configure anything. Each tab opens with the <b>default model</b>: the operationalization
-        used in the PIP publications, chosen on the basis of the relevant theories and, for the government models,
-        on an empirical analysis. These defaults are <b>precomputed</b>, so the published measures appear instantly
-        — nothing to wait for and no settings to understand.</p>
+      <div class="tipbox">
+        <p>You do not need to configure anything. Each tab opens with the <b>default model</b>: the operationalization
+          used in the PIP publications, chosen on the basis of the relevant theories and, for the government models,
+          on an empirical analysis. These defaults are <b>precomputed</b>, so the published measures appear instantly
+          — nothing to wait for and no settings to understand.</p>
+      </div>
       <p>To see what a default consists of, open <b>Model per country</b> in the <i>Country models</i> tab, or
         <b>Institutional models</b> in the <i>EU institutions</i> tab. Party positions need no model at all — they
         are read directly from the data. If you do want to depart from the defaults, the next section walks through
@@ -1137,11 +1152,9 @@ function modelHint(){
   const n=st.sel.length;
   if(!n){ h.textContent="no countries selected"; return; }
   const mod=st.sel.filter(i=>st.modified[i]).length;
-  const segs=st.sel.reduce((a,i)=>a+((st.models[i]||[1]).length),0);
-  const perioden = segs>n ? ` · ${segs-n} extra period${segs-n>1?"s":""}` : "";
   h.textContent = mod
-    ? `${mod} of ${n} ${n===1?"country":"countries"} changed${perioden} — open to review`
-    : `standard models${perioden} — open to change government, minority or veto players`;
+    ? `${mod} of ${n} ${n===1?"country":"countries"} changed — open this section to review`
+    : `standard models — open this section to check them or to create your own`;
 }
 // "Run estimation" nur aktiv, wenn die Standardwerte geladen sind UND mindestens ein Land gewaehlt
 // ist. Wird ueberall dort aufgerufen, wo frueher direkt disabled=false gesetzt wurde.
