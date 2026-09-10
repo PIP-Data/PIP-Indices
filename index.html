@@ -68,6 +68,17 @@
   .no{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--accent-ink);background:var(--accent-soft);width:26px;height:26px;display:grid;place-items:center;border-radius:7px}
   .hd h2{font-size:15px;font-weight:650} .hd .hint{margin-left:auto;color:var(--muted);font-size:12.5px}
   .bd{padding:18px}
+  /* Aufklappbare Karte (Abschnitt 3 "Model per country"): fuer den schnellen Blick stoert die
+     Modelltabelle, Forschende klappen sie auf. Die summary sieht aus wie eine normale
+     Kartenkopfzeile (.hd), bekommt nur Zeiger und Pfeil. */
+  details.cardfold > summary{cursor:pointer;list-style:none;border-bottom:0}
+  details.cardfold > summary::-webkit-details-marker{display:none}
+  details.cardfold[open] > summary{border-bottom:1px solid var(--line)}
+  details.cardfold > summary::after{content:"\25B8";color:var(--muted);flex:none;transition:transform .15s}
+  details.cardfold[open] > summary::after{transform:rotate(90deg)}
+  details.cardfold > summary:hover .hint{color:var(--accent-ink)}
+  details.cardfold > summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  @media (prefers-reduced-motion:reduce){ details.cardfold > summary::after{transition:none} }
   .lab{font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:650;margin-bottom:9px;display:block}
   .dims{display:flex;flex-wrap:wrap;gap:10px}
   .dim{cursor:pointer;background:var(--surface-2);border:1.5px solid var(--line);border-radius:var(--r-sm);padding:11px 14px;font:inherit;text-align:left}
@@ -305,13 +316,21 @@
           policy field that Commission and Council of Ministers are read for.</dd>
       </dl>
 
+      <h4>The default model — nothing to set up</h4>
+      <p>You do not need to configure anything. Each tab opens with the <b>default model</b>: the operationalization
+        used in the PIP publications, chosen on the basis of the relevant theories and, for the government models,
+        on an empirical analysis. These defaults are <b>precomputed</b>, so the published measures appear instantly
+        — nothing to wait for and no settings to understand.</p>
+      <p>To see what a default consists of, open <b>Model per country</b> in the <i>Country models</i> tab, or
+        <b>Institutional models</b> in the <i>EU institutions</i> tab. Party positions need no model at all — they
+        are read directly from the data. If you do want to depart from the defaults, the next section walks through
+        every control.</p>
+
       <h4>Choosing your own model — what this adds over a plain download</h4>
-      <p>Every result starts from a <b>default model</b>: the operationalization used in the PIP publications,
-        chosen on the basis of the relevant theories and, for the government models, on an empirical analysis.
-        These defaults are precomputed, so the published measures appear instantly without your having to touch a
-        single setting. But an operationalization is a theoretical decision, not a fact — each one is exposed as a
-        control you can change, and the result is then recomputed live for that country alone. Here is a short
-        summary of the default models.</p>
+      <p>An operationalization is a theoretical decision, not a fact. Others may prefer a different one, and a
+        specific research question may call for a different emphasis. Each such decision is therefore exposed as a
+        control you can change, and the result is recomputed live for that country alone. Here is a short summary
+        of the default models.</p>
 
       <h5>Government positions</h5>
       <p>The positions of governments can be conceptualized differently. We offer three alternatives and an
@@ -491,12 +510,14 @@
       </div>
     </section>
 
-    <section class="card">
-      <div class="hd"><span class="no">3</span><h2>Model per country</h2><span class="hint">government · minority · veto players · “+ period” lets a model change over time</span></div>
+    <details class="card cardfold" id="modelFold">
+      <summary class="hd"><span class="no">3</span><h2>Model per country</h2><span class="hint" id="modelHint">standard models</span></summary>
       <div class="bd">
+        <p class="fineprint" style="margin:0 0 12px">Government aggregation, minority rule and veto players, per country.
+          <b>“+ period”</b> lets a model change over time. Leave everything untouched to get the published standard models.</p>
         <div class="scroll"><table><thead><tr><th>Country</th><th>Period</th><th>Government</th><th>Minority</th><th>Veto players</th></tr></thead><tbody id="rows"></tbody></table></div>
       </div>
-    </section>
+    </details>
 
     <div class="runrow">
       <button class="run" id="runBtn" disabled>Run estimation</button>
@@ -1087,7 +1108,7 @@ function portfSel(sg){          // zwei Ressort-Selects: 1. Wahl, 2. Wahl (Fallb
          `<label>then <select data-k="pf1">${opts(pf[1]||"",true)}</select></label></div>`;
 }
 function rows(){
-  const b=$("#rows"); if(!st.sel.length){b.innerHTML='<tr><td colspan="5" style="color:var(--muted);padding:14px">Select at least one country.</td></tr>';return;}
+  const b=$("#rows"); if(!st.sel.length){b.innerHTML='<tr><td colspan="5" style="color:var(--muted);padding:14px">Select at least one country.</td></tr>';modelHint();syncRunBtn();return;}
   b.innerHTML=st.sel.map(iso=>{ ensureModel(iso);
     const tag=st.modified[iso]?` <span class="custtag">custom</span>`:"";
     return st.models[iso].map((sg,k)=>{
@@ -1107,7 +1128,24 @@ function rows(){
              `<td><select data-k="min">${mi}</select></td><td><div class="vp">${vp}</div></td></tr>`;
     }).join("");
   }).join("");
+  modelHint(); syncRunBtn();
 }
+// Zusammenfassung fuer die zugeklappte Kopfzeile von Abschnitt 3: Wer die Karte nicht oeffnet, soll
+// trotzdem sehen, ob noch die Standardmodelle gelten oder ob er selbst etwas geaendert hat.
+function modelHint(){
+  const h=$("#modelHint"); if(!h) return;
+  const n=st.sel.length;
+  if(!n){ h.textContent="no countries selected"; return; }
+  const mod=st.sel.filter(i=>st.modified[i]).length;
+  const segs=st.sel.reduce((a,i)=>a+((st.models[i]||[1]).length),0);
+  const perioden = segs>n ? ` · ${segs-n} extra period${segs-n>1?"s":""}` : "";
+  h.textContent = mod
+    ? `${mod} of ${n} ${n===1?"country":"countries"} changed${perioden} — open to review`
+    : `standard models${perioden} — open to change government, minority or veto players`;
+}
+// "Run estimation" nur aktiv, wenn die Standardwerte geladen sind UND mindestens ein Land gewaehlt
+// ist. Wird ueberall dort aufgerufen, wo frueher direkt disabled=false gesetzt wurde.
+function syncRunBtn(){ const b=$("#runBtn"); if(b) b.disabled = !defReady || !st.sel.length; }
 function render(){dims();chips();rows();}
 
 document.addEventListener("click",e=>{
@@ -1217,7 +1255,7 @@ async function loadDefaults(){
     if(!m.has(row[0])) m.set(row[0],[]);
     m.get(row[0]).push(row);
   }
-  defReady=true; $("#runBtn").disabled=false;
+  defReady=true; syncRunBtn();
   eng("ready — standard models load instantly");
   setStatus("ready — configure and run. Standard models are instant; changing a model computes it live.");
 }
@@ -1341,8 +1379,8 @@ $("#runBtn").addEventListener("click",async()=>{
     present();
     setStatus(isCustomDim ? "done — "+custIsos.length+" custom (custom scale, always live)."
       : custIsos.length? "done — "+defIsos.length+" standard + "+custIsos.length+" custom." : "done — all from standard models (instant).");
-    $("#runBtn").disabled=false;
-  }catch(err){ setStatus("error: "+err.message); eng(webrReady?"engine ready":"ready"); $("#runBtn").disabled=false;
+    syncRunBtn();
+  }catch(err){ setStatus("error: "+err.message); eng(webrReady?"engine ready":"ready"); syncRunBtn();
     // Ergebnisse des VORHERIGEN Laufs ausblenden: sonst stehen nach einem Fehler weiter alte Zahlen
     // in der Tabelle, die wie ein gueltiges Resultat der neuen Einstellung aussehen.
     lastQ=[]; $("#results").hidden=true; }
