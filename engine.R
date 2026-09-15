@@ -295,6 +295,24 @@ gov_usa_special <- function(d, ideo, basics){
     # Senat: Majoritaetsfraktion (max p402), Filibuster-Kompromiss
     p402<-x$p402; p403<-x$p403[1]
     mj <- which(!is.na(p402) & p402==suppressWarnings(max(p402,na.rm=TRUE)))
+    # >>> STICHENTSCHEID BEI GLEICHSTAND (15.9.2026) <<<
+    # Bis hierher entschied bei 50:50 schlicht mj[1], also die ZEILENREIHENFOLGE
+    # im Panel. Die ist nicht stabil: im 107. Kongress (2001/02, 50:50, unveraenderte
+    # Zusammensetzung) sprang VP_RANGE dadurch zwischen 2,0 und 10,4 hin und her -
+    # drei Ausreisser mitten in einer Wahlperiode, rein aus der Sortierung.
+    # RICHTIG ist Art. I Abschn. 3 der Verfassung: der Vizepraesident ist Praesident
+    # des Senats und stimmt bei Stimmengleichheit ab. Vize und Praesident werden auf
+    # EINEM Ticket gewaehlt, p502 (Praesidentenpartei) ist also der exakte
+    # Stellvertreter - und es braucht keine neue Datenspalte, p502 steht bereits in
+    # derselben Quartalszeile.
+    # BETROFFEN sind 16 Quartale: 83. Kongress (1953/54, 48:48, Vize Nixon R) und
+    # 107. Kongress (2001/02, 50:50, Vize Cheney R). In beiden stellte die
+    # REPUBLIKANISCHE Seite den Vize. Der 117. Kongress (2021/22, 50:50, Vize
+    # Harris D) kommt mit der Fortschreibung hinzu.
+    if(length(mj) > 1){
+      pj <- mj[ing(x$p502[mj])]
+      if(length(pj) == 1) mj <- pj    # sonst (kein/mehrdeutiger Praesident) wie bisher
+    }
     senate <- NA_real_
     if(length(mj) && is.finite(p403)){
       j<-mj[1]; maj_seats<-p402[j]; maj_pos<-x$.ideo[j]
